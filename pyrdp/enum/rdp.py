@@ -819,12 +819,6 @@ class ChannelOption(IntFlag):
     REMOTE_CONTROL_PERSISTENT = 0x00100000
 
 
-class DrawingOrderControlFlags(IntEnum):
-    """
-    https://msdn.microsoft.com/en-us/library/cc241574.aspx
-    """
-    TS_STANDARD = 0b00000001
-    TS_SECONDARY = 0b00000010
 
 
 class BitmapFlags(IntEnum):

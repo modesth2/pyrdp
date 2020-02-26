@@ -1,7 +1,6 @@
 """
 TS_FP_UPDATE_ORDERS parser.
 """
-# flake8: noqa
 #
 # This file is part of the PyRDP project.
 # Copyright (C) 2018 GoSecure Inc.
@@ -13,9 +12,12 @@ from io import BytesIO
 
 from pyrdp.core import Uint16LE, Uint8
 from pyrdp.pdu.rdp.fastpath import FastPathOrdersEvent
-from pyrdp.enum.rdp import DrawingOrderControlFlags
+from pyrdp.enum.rdp import DrawingOrderControlFlags, \
+     AltSecDrawingOrder
 
 LOG = logging.getLogger('pyrdp.fastpath.parser')
+
+
 
 class OrdersParser:
     """
@@ -93,4 +95,3 @@ class OrdersParser:
         };
         """
         orderType = flags >> 2
-        pass
