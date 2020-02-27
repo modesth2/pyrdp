@@ -1,6 +1,3 @@
-"""
-TS_FP_UPDATE_ORDERS parser.
-"""
 #
 # This file is part of the PyRDP project.
 # Copyright (C) 2018 GoSecure Inc.
@@ -16,7 +13,6 @@ from pyrdp.enum.rdp import DrawingOrderControlFlags, \
      AltSecDrawingOrder
 
 LOG = logging.getLogger('pyrdp.fastpath.parser')
-
 
 
 class OrdersParser:
@@ -70,28 +66,10 @@ class OrdersParser:
         """
         Parse a secondary drawing order.
         """
-        # stream = BytesIO(orderData)
-        # controlFlags = Uint8.unpack(stream.read(1))  # Is the same byte? Looks like it.
-        # orderLength = Uint16LE.unpack(stream.read(2)) + 13  # See Spec.
-        # LOG.debug('   %d/%d' % (orderLength, size))
-        # extraFlags = Uint16LE.unpack(stream.read(2))
-        # orderType = Uint8.unpack(stream.read(1))
-        # stream.read(orderLength)  # Skip the order length for now.
-        # ordersEvent.secondaryDrawingOrders = SecondaryDrawingOrder(controlFlags, orderLength, extraFlags, orderType)
         pass
 
     def parseAlternate(stream: BytesIO, flags: int):
         """
         Parse an alternate secondary drawing order.
-
-        const char* orders[] = {
-            "[0x%02" PRIx8 "] Switch Surface",         "[0x%02" PRIx8 "] Create Offscreen Bitmap",
-            "[0x%02" PRIx8 "] Stream Bitmap First",    "[0x%02" PRIx8 "] Stream Bitmap Next",
-            "[0x%02" PRIx8 "] Create NineGrid Bitmap", "[0x%02" PRIx8 "] Draw GDI+ First",
-            "[0x%02" PRIx8 "] Draw GDI+ Next",         "[0x%02" PRIx8 "] Draw GDI+ End",
-            "[0x%02" PRIx8 "] Draw GDI+ Cache First",  "[0x%02" PRIx8 "] Draw GDI+ Cache Next",
-            "[0x%02" PRIx8 "] Draw GDI+ Cache End",    "[0x%02" PRIx8 "] Windowing",
-            "[0x%02" PRIx8 "] Desktop Composition",    "[0x%02" PRIx8 "] Frame Marker"
-        };
         """
         orderType = flags >> 2
