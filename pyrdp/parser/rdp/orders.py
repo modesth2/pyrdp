@@ -63,6 +63,15 @@ class Secondary:
     BITMAP_COMPRESSED_V3 = 0x08
 
 
+# Secondary CBR
+CBR2_HEIGHT_SAME_AS_WIDTH = 0x01
+CBR2_PERSISTENT_KEY_PRESENT = 0x02
+CBR2_NO_BITMAP_COMPRESSION_HDR = 0x08
+CBR2_DO_NOT_CACHE = 0x10
+
+BITMAP_CACHE_WAITING_LIST_INDEX = 0x7FFF
+
+
 class Alternate:
     SWITCH_SURFACE = 0x00
     CREATE_OFFSCREEN_BITMAP = 0x01
@@ -78,6 +87,39 @@ class Alternate:
     WINDOW = 0x0B
     COMPDESK_FIRST = 0x0C
     FRAME_MARKER = 0x0D
+
+
+# 2.2.2.2.1.2.3
+CBR2_BPP = [0, 0, 0, 8, 16, 24, 32]
+
+BPP_CBR2 = [0, 0, 0, 0, 0, 0, 0, 0, 3, 0, 0, 0, 0, 0, 0, 0, 4, 0, 0, 0,
+            0, 0, 0, 0, 5, 0, 0, 0, 0, 0, 0, 0, 6, 0, 0, 0, 0, 0, 0, 0]
+
+CBR23_BPP = [0, 0, 0, 8, 16, 24, 32]
+
+BPP_CBR23 = [0, 0, 0, 0, 0, 0, 0, 0, 3, 0, 0, 0, 0, 0, 0, 0, 4, 0, 0, 0,
+             0, 0, 0, 0, 5, 0, 0, 0, 0, 0, 0, 0, 6, 0, 0, 0, 0, 0, 0, 0]
+
+BMF_BPP = [0, 1, 0, 8, 16, 24, 32, 0]
+
+BPP_BMF = [0, 1, 0, 0, 0, 0, 0, 0, 3, 0, 0, 0, 0, 0, 0, 0, 4, 0, 0, 0,
+           0, 0, 0, 0, 5, 0, 0, 0, 0, 0, 0, 0, 6, 0, 0, 0, 0, 0, 0, 0]
+
+
+# These are encoding optimizations proper to Draw Orders
+def read_encoded_uint16(s: BytesIO) -> int:
+    b = Uint8.unpack(s)
+    if b & 0x80:
+        return (b & 0x7F) << 8 | Uint8.unpack(s)
+    else:
+        return b & 0x7F
+
+def read_encoded_uint32(s: BytesIO) -> int:
+    b = Uint8.unpack(s)
+    if b & 0x80:
+        return (b & 0x7F) << 8 | Uint8.unpack(s)
+    else:
+        return b & 0x7F
 # ------------------------------------------------------------------------------ [/REFACTOR]
 
 
@@ -211,29 +253,71 @@ class OrdersParser:
     # Secondary drawing orders.
     # ----------------------------------------------------------------------
     def parse_secondary(self, s: BytesIO, flags: int):
-        pass
+        orderLength = Uint16LE.unpack(s)
+        extraFlags = Uint16LE.unpack(s)  # TODO: Need to pass these through as well.
+        orderType = Uint8.unpack(s)
+        # nxt = orderLength + 7
 
-    def parse_cache_bitmap_v1(self, s: BytesIO, orderType: int):
+        assert orderType >= 0 and orderType < len(_sec)
+
+        fp = _sec[orderType]
+        print(f'Order: {_repr(fp)}')  # DEBUG
+        fp(self, s, orderType, extraFlags)
+
+    def parse_cache_bitmap_v1(self, s: BytesIO, orderType: int, flags: int):
         """CACHE_BITMAP_V1"""
         pass
 
-    def parse_cache_color_table(self, s: BytesIO, orderType: int):
+    def parse_cache_color_table(self, s: BytesIO, orderType: int, flags: int):
         """CACHE_COLOR_TABLE"""
         pass
 
-    def parse_cache_glyph(self, s: BytesIO, orderType: int):
+    def parse_cache_glyph(self, s: BytesIO, orderType: int, flags: int):
         """CACHE_GLYPH"""
         pass
 
-    def parse_cache_bitmap_v2(self, s: BytesIO, orderType: int):
+    def parse_cache_bitmap_v2(self, s: BytesIO, orderType: int, flags: int):
         """CACHE_BITMAP_V2"""
-        pass
+        # 2.2.2.2.1.2.3
+        cacheId = flags & 0x0003
+        bitmapFlags = (flags & 0xFF80) >> 7
+        bpp = CBR2_BPP[(flags & 0x0078) >> 3]
 
-    def parse_cache_brush(self, s: BytesIO, orderType: int):
+        if bitmapFlags & CBR2_PERSISTENT_KEY_PRESENT:
+            key1 = Uint32LE.unpack(s)
+            key2 = Uint32LE.unpack(s)
+
+        if bitmapFlags & CBR2_HEIGHT_SAME_AS_WIDTH:
+            h = w = read_encoded_uint16(s)
+        else:
+            w = read_encoded_uint16(s)
+            h = read_encoded_uint16(s)
+
+        bitmapLength = read_encoded_uint32(s)
+        cacheIndex = read_encoded_uint16(s)
+
+        if bitmapFlags & CBR2_DO_NOT_CACHE:
+            cacheIndex = BITMAP_CACHE_WAITING_LIST_INDEX
+
+        if orderType & Secondary.BITMAP_COMPRESSED_V2 and not \
+           (bitmapFlags & CBR2_NO_BITMAP_COMPRESSION_HDR):
+            # Parse compression header
+            cbCompFirstRowSize = Uint16LE.unpack(s)
+            cbCompMainBodySize = Uint16LE.unpack(s)
+            cbScanWidth = Uint16LE.unpack(s)
+            cbUncompressedSize = Uint16LE.unpack(s)
+
+            bitmapLength = cbCompMainBodySize
+
+        # Read bitmap data
+        data = s.read(bitmapLength)
+        print(data)  # DEBUG
+
+    def parse_cache_brush(self, s: BytesIO, orderType: int, flags: int):
         """CACHE_BRUSH"""
         pass
 
-    def parse_cache_bitmap_v3(self, s: BytesIO, orderType: int):
+    def parse_cache_bitmap_v3(self, s: BytesIO, orderType: int, flags: int):
         """CACHE_BITMAP_V3"""
         pass
 
