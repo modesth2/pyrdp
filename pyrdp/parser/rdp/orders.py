@@ -131,6 +131,14 @@ def read_encoded_uint32(s: BytesIO) -> int:
                 Uint8.unpack(s) << 16 |
                 Uint8.unpack(s) << 8 |
                 Uint8.unpack(s))
+
+
+def read_color(s: BytesIO):
+    """
+    2.2.2.2.1.3.4.1.1 TS_COLORREF ->  rgb
+    2.2.2.2.1.2.4.1   TS_COLOR_QUAD -> bgr
+    """
+    return Uint32LE.unpack(s) & 0x00FFFFFF
 # ------------------------------------------------------------------------------ [/REFACTOR]
 
 
@@ -295,7 +303,11 @@ class OrdersParser:
 
     def parse_cache_color_table(self, s: BytesIO, orderType: int, flags: int):
         """CACHE_COLOR_TABLE"""
-        pass
+        cacheIndex = Uint8LE.unpack(s)
+        numberColors = Uint16LE.unpack(s)
+
+        assert numberColors == 256
+        colors = [read_color(s) for _ in range(numberColors)]
 
     def parse_cache_glyph(self, s: BytesIO, orderType: int, flags: int):
         """CACHE_GLYPH"""
