@@ -8,7 +8,7 @@ from binascii import hexlify
 from io import BytesIO
 
 from pyrdp.core import Uint16BE, Uint16LE, Uint8
-from pyrdp.enum import DrawingOrderControlFlags, EncryptionMethod, FastPathInputType, \
+from pyrdp.enum import EncryptionMethod, FastPathInputType, \
     FastPathOutputCompressionType, FastPathOutputType, FastPathSecurityFlags, FIPSVersion, ParserMode
 from pyrdp.pdu import FastPathBitmapEvent, FastPathEventRaw, FastPathMouseEvent, FastPathOrdersEvent, FastPathPDU, \
     FastPathScanCodeEvent
@@ -17,7 +17,7 @@ from pyrdp.security import RC4Crypter, RC4CrypterProxy
 
 from pyrdp.parser.parser import Parser
 from pyrdp.parser.rdp.bitmap import BitmapParser
-from pyrdp.parser.rdp.order import OrdersParser
+from pyrdp.parser.rdp.orders import OrdersParser
 from pyrdp.parser.rdp.security import BasicSecurityParser
 
 from pyrdp.logging import log
@@ -368,7 +368,6 @@ class FastPathOutputParser(Parser):
 
         https://docs.microsoft.com/en-us/openspecs/windows_protocols/ms-rdpbcgr/a1c4caa8-00ed-45bb-a06e-5177473766d3
         """
-        # [REFACTOR] Follow the spec more clearly and use an UpdatePDU.
         stream = BytesIO(data)
         header = Uint8.unpack(stream)
 
@@ -414,13 +413,13 @@ class FastPathOutputParser(Parser):
         Parse the order events from a TS_FP_UPDATE_ORDERS.
         This is specified in MS-RDPEGDI.
         """
-        payload = stream.read(size) 
+        payload = stream.read(size)
         assert len(payload) == size
 
         orders = FastPathOrdersEvent(header, compressionFlags, payload)
         # This could be disabled in MITM for performance since the video
         # is not modified.
-        return self.orderParser.parse(orders, BytesIO(stream))
+        return self.orderParser.parse(orders, BytesIO(payload))
 
     def writeOrdersEvent(self, stream, event):
         # Just write the saved raw bytes as-is.
