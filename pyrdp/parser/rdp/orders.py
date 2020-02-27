@@ -9,8 +9,8 @@ from io import BytesIO
 
 from pyrdp.core import Uint16LE, Uint8, Uint32LE
 from pyrdp.pdu.rdp.fastpath import FastPathOrdersEvent
-# from pyrdp.enum.rdp import DrawingOrderControlFlags, \
-#      AltSecDrawingOrder
+from pyrdp.enum.rdp import \
+        GeneralExtraFlag
 
 LOG = logging.getLogger('pyrdp.fastpath.parser')
 
@@ -63,7 +63,7 @@ class Secondary:
     BITMAP_COMPRESSED_V3 = 0x08
 
 
-# Secondary CBR
+# Secondary Specific Enums
 CBR2_HEIGHT_SAME_AS_WIDTH = 0x01
 CBR2_PERSISTENT_KEY_PRESENT = 0x02
 CBR2_NO_BITMAP_COMPRESSION_HDR = 0x08
@@ -108,18 +108,29 @@ BPP_BMF = [0, 1, 0, 0, 0, 0, 0, 0, 3, 0, 0, 0, 0, 0, 0, 0, 4, 0, 0, 0,
 
 # These are encoding optimizations proper to Draw Orders
 def read_encoded_uint16(s: BytesIO) -> int:
+    # 2.2.2.2.1.2.1.3
     b = Uint8.unpack(s)
     if b & 0x80:
         return (b & 0x7F) << 8 | Uint8.unpack(s)
     else:
         return b & 0x7F
 
+
 def read_encoded_uint32(s: BytesIO) -> int:
+    # 2.2.2.2.1.2.1.4
     b = Uint8.unpack(s)
-    if b & 0x80:
-        return (b & 0x7F) << 8 | Uint8.unpack(s)
-    else:
-        return b & 0x7F
+    n = (b & 0xC0) >> 6
+    if n == 0:
+        return b & 0x3F
+    elif n == 1:
+        return (b & 0x3F) << 8 | Uint8.unpack(s)
+    elif n == 2:
+        return ((b & 0x3F) << 16 | Uint8.unpack(s) << 8 | Uint8.unpack(s))
+    else:  # 3
+        return ((b & 0x3F) << 24 |
+                Uint8.unpack(s) << 16 |
+                Uint8.unpack(s) << 8 |
+                Uint8.unpack(s))
 # ------------------------------------------------------------------------------ [/REFACTOR]
 
 
@@ -266,7 +277,21 @@ class OrdersParser:
 
     def parse_cache_bitmap_v1(self, s: BytesIO, orderType: int, flags: int):
         """CACHE_BITMAP_V1"""
-        pass
+        cacheId = Uint8.unpack(s)
+        s.read(1)  # Padding
+        bitmapWidth = Uint8.unpack(s)
+        bitmapHeight = Uint8.unpack(s)
+        bitmapBpp = Uint8.unpack(s)
+
+        bitmapLength = Uint16LE.unpack(s)
+        cacheIndex = Uint16LE.unpack(s)
+
+        if orderType & Secondary.CACHE_BITMAP_COMPRESSED and \
+           not flags & GeneralExtraFlag.NO_BITMAP_COMPRESSION_HDR:
+            compression = s.read(8)
+            bitmapLength -= 8
+
+        data = s.read(bitmapLength)
 
     def parse_cache_color_table(self, s: BytesIO, orderType: int, flags: int):
         """CACHE_COLOR_TABLE"""
