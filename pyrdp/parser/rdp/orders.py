@@ -70,6 +70,7 @@ CBR2_NO_BITMAP_COMPRESSION_HDR = 0x08
 CBR2_DO_NOT_CACHE = 0x10
 
 BITMAP_CACHE_WAITING_LIST_INDEX = 0x7FFF
+CG_GLYPH_UNICODE_PRESENT = 0x100
 
 
 class Alternate:
@@ -139,6 +140,10 @@ def read_color(s: BytesIO):
     2.2.2.2.1.2.4.1   TS_COLOR_QUAD -> bgr
     """
     return Uint32LE.unpack(s) & 0x00FFFFFF
+
+
+def read_utf16_str(s: BytesIO, size: int) -> bytes:
+    return bytes([Uint16LE.unpack(s) for _ in range(size)])  # Decode into str?
 # ------------------------------------------------------------------------------ [/REFACTOR]
 
 
@@ -303,7 +308,7 @@ class OrdersParser:
 
     def parse_cache_color_table(self, s: BytesIO, orderType: int, flags: int):
         """CACHE_COLOR_TABLE"""
-        cacheIndex = Uint8LE.unpack(s)
+        cacheIndex = Uint8.unpack(s)
         numberColors = Uint16LE.unpack(s)
 
         assert numberColors == 256
@@ -311,7 +316,25 @@ class OrdersParser:
 
     def parse_cache_glyph(self, s: BytesIO, orderType: int, flags: int):
         """CACHE_GLYPH"""
-        pass
+        # 2.2.2.2.1.2.5
+        cacheId = Uint8.unpack(s)
+        cGlyphs = Uint8.unpack(s)
+
+        for _ in range(cGlyphs):
+            cacheIndex = Uint16LE.unpack(s)
+            cx = Uint16LE.unpack(s)
+            cy = Uint16LE.unpack(s)
+
+            cb = ((cx + 7) / 8) * cy
+            cb += 4 - (cb % 4) if ((cb % 4) > 0) else 0
+
+            aj = s.read(cb)
+            # onGlyph
+
+        if flags & CG_GLYPH_UNICODE_PRESENT and cGlyphs > 0:
+            unicodeChars = read_utf16_str(s, cGlyphs)
+
+        # onGlyphUnicodeChars
 
     def parse_cache_bitmap_v2(self, s: BytesIO, orderType: int, flags: int):
         """CACHE_BITMAP_V2"""
@@ -452,7 +475,7 @@ class OrdersParser:
 
     def parse_gdiplus_cache_first(self, s: BytesIO):
         """GDIPLUS_CACHE_FIRST"""
-        flags = Uint8LE.unpack(s)
+        flags = Uint8.unpack(s)
         cacheType = Uint16LE.unpack(s)
         cacheIndex = Uint16LE.unpack(s)
         cbSize = Uint16LE.unpack(s)
@@ -461,14 +484,14 @@ class OrdersParser:
 
     def parse_gdiplus_cache_next(self, s: BytesIO):
         """GDIPLUS_CACHE_NEXT"""
-        flags = Uint8LE.unpack(s)
+        flags = Uint8.unpack(s)
         cacheType = Uint16LE.unpack(s)
         cacheIndex = Uint16LE.unpack(s)
         emf = s.read(cbSize)
 
     def parse_gdiplus_cache_end(self, s: BytesIO):
         """GDIPLUS_CACHE_END"""
-        flags = Uint8LE.unpack(s)
+        flags = Uint8.unpack(s)
         cacheType = Uint16LE.unpack(s)
         cacheIndex = Uint16LE.unpack(s)
         cbSize = Uint16LE.unpack(s)
