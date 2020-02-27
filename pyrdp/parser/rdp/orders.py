@@ -7,7 +7,7 @@
 import logging
 from io import BytesIO
 
-from pyrdp.core import Uint16LE, Uint8
+from pyrdp.core import Uint16LE, Uint8, Uint32LE
 from pyrdp.pdu.rdp.fastpath import FastPathOrdersEvent
 # from pyrdp.enum.rdp import DrawingOrderControlFlags, \
 #      AltSecDrawingOrder
@@ -17,6 +17,14 @@ LOG = logging.getLogger('pyrdp.fastpath.parser')
 # REFACTOR: Pull all of this into pyrdp.enum ---------------------------------------------------
 TS_STANDARD = 0x1
 TS_SECONDARY = 0x2
+
+
+def _repr(n) -> str:
+    """
+    Convert a drawing order type into a string.
+    """
+    r = n.__doc__
+    return r if r else 'UNKNOWN (%02x)'.format(n)
 
 
 class Primary:
@@ -43,13 +51,6 @@ class Primary:
     ELLIPSE_CB = 0x1A
     GLYPH_INDEX = 0x1B
 
-    @staticmethod
-    def toString(n: 'Primary'):
-        """
-        TODO: Do some hacky magic with OrderParser handlers and docstrings?
-        """
-        return 'TODO'
-
 
 class Secondary:
     BITMAP_UNCOMPRESSED = 0x00
@@ -60,10 +61,6 @@ class Secondary:
     BITMAP_COMPRESSED_V2 = 0x05
     CACHE_BRUSH = 0x07
     BITMAP_COMPRESSED_V3 = 0x08
-
-    @staticmethod
-    def toString(n: 'Secondary'):
-        return 'TODO'
 
 
 class Alternate:
@@ -81,10 +78,6 @@ class Alternate:
     WINDOW = 0x0B
     COMPDESK_FIRST = 0x0C
     FRAME_MARKER = 0x0D
-
-    @staticmethod
-    def toString(n: 'Secondary'):
-        return 'TODO'
 # ------------------------------------------------------------------------------ [/REFACTOR]
 
 
@@ -96,7 +89,6 @@ class OrdersParser:
     def __init__(self):
         # TODO: Create GDI state here.
         self.orders: FastPathOrdersEvent = None
-        pass
 
     def parse(self, orders: FastPathOrdersEvent, s: BytesIO):
         """
@@ -114,10 +106,13 @@ class OrdersParser:
         controlFlags = Uint8.unpack(s)
 
         if not (controlFlags & TS_STANDARD):
+            print('Type: ALTSEC')  # DEBUG
             self.parse_altsec(s, controlFlags)
         elif (controlFlags & TS_SECONDARY):
+            print('Type: SECONDARY')  # DEBUG
             self.parse_secondary(s, controlFlags)
         else:
+            print('Type: PRIMARY')  # DEBUG
             self.parse_primary(s, controlFlags)
 
     # Primary drawing orders.
@@ -126,141 +121,251 @@ class OrdersParser:
         pass
 
     def parse_dstblt(self, s: BytesIO):
+        """DSTBLT"""
         pass
 
     def parse_patblt(self, s: BytesIO):
+        """PATBLT"""
         pass
 
     def parse_scrblt(self, s: BytesIO):
+        """SCRBLT"""
         pass
 
     def parse_draw_nine_grid(self, s: BytesIO):
+        """DRAW_NINE_GRID"""
         pass
 
     def parse_multi_draw_nine_grid(self, s: BytesIO):
+        """MULTI_DRAW_NINE_GRID"""
         pass
 
     def parse_line_to(self, s: BytesIO):
+        """LINE_TO"""
         pass
 
     def parse_opaque_rect(self, s: BytesIO):
+        """OPAQUE_RECT"""
         pass
 
     def parse_save_bitmap(self, s: BytesIO):
+        """SAVE_BITMAP"""
         pass
 
     def parse_memblt(self, s: BytesIO):
+        """MEMBLT"""
         pass
 
     def parse_mem3blt(self, s: BytesIO):
+        """MEM3BLT"""
         pass
 
     def parse_multi_dstblt(self, s: BytesIO):
+        """MULTI_DSTBLT"""
         pass
 
     def parse_multi_patblt(self, s: BytesIO):
+        """MULTI_PATBLT"""
         pass
 
     def parse_multi_scrblt(self, s: BytesIO):
+        """MULTI_SCRBLT"""
         pass
 
     def parse_multi_opaque_rect(self, s: BytesIO):
+        """MULTI_OPAQUE_RECT"""
         pass
 
     def parse_fast_index(self, s: BytesIO):
+        """FAST_INDEX"""
         pass
 
     def parse_polygon_sc(self, s: BytesIO):
+        """POLYGON_SC"""
         pass
 
     def parse_polygon_cb(self, s: BytesIO):
+        """POLYGON_CB"""
         pass
 
     def parse_polyline(self, s: BytesIO):
+        """POLYLINE"""
         pass
 
     def parse_fast_glyph(self, s: BytesIO):
+        """FAST_GLYPH"""
         pass
 
     def parse_ellipse_sc(self, s: BytesIO):
+        """ELLIPSE_SC"""
         pass
 
     def parse_ellipse_cb(self, s: BytesIO):
+        """ELLIPSE_CB"""
         pass
 
     def parse_glyph_index(self, s: BytesIO):
+        """GLYPH_INDEX"""
         pass
 
-    # Seocndary drawing orders.
+    # Secondary drawing orders.
     # ----------------------------------------------------------------------
     def parse_secondary(self, s: BytesIO, flags: int):
         pass
 
     def parse_cache_bitmap_v1(self, s: BytesIO, orderType: int):
+        """CACHE_BITMAP_V1"""
         pass
 
     def parse_cache_color_table(self, s: BytesIO, orderType: int):
+        """CACHE_COLOR_TABLE"""
         pass
 
     def parse_cache_glyph(self, s: BytesIO, orderType: int):
+        """CACHE_GLYPH"""
         pass
 
     def parse_cache_bitmap_v2(self, s: BytesIO, orderType: int):
+        """CACHE_BITMAP_V2"""
         pass
 
     def parse_cache_brush(self, s: BytesIO, orderType: int):
+        """CACHE_BRUSH"""
         pass
 
     def parse_cache_bitmap_v3(self, s: BytesIO, orderType: int):
+        """CACHE_BITMAP_V3"""
         pass
 
     # Alternate secondary drawing orders.
     # ----------------------------------------------------------------------
     def parse_altsec(self, s: BytesIO, flags: int):
-        pass
+        orderType = flags >> 2
+
+        # TODO: Log unsupported orders.
+        assert orderType >= 0 and orderType < len(_alt)
+
+        fp = _alt[orderType]
+        print(f'Order: {_repr(fp)}')  # DEBUG
+        fp(self, s)
 
     def parse_create_offscreen_bitmap(self, s: BytesIO):
-        pass
+        """CREATE_OFFSCREEN_BITMAP"""
+        flags = Uint16LE.unpack(s)
+        bitmapId = flags & 0x7FFF
+        delete = flags & 0x8000 != 0
+        cx = Uint16LE.unpack(s)
+        cy = Uint16LE.unpack(s)
+        # TODO: Create new bitmap entry (Through an observer?)
+
+        # Handle delete list
+        # TODO: Update cache (in python this can be a dict.)
+        if delete:
+            cIndices = Uint16LE.unpack(s)
+            for _ in range(cIndices):
+                i = Uint16LE.unpack(s)
+                # TODO: Delete bitmap from cache.
 
     def parse_switch_surface(self, s: BytesIO):
-        pass
+        """SWITCH_SURFACE"""
+        surfaceId = Uint16LE.unpack(s)
 
     def parse_create_nine_grid_bitmap(self, s: BytesIO):
-        pass
+        """CREATE_NINEGRID_BITMAP"""
+        bpp = Uint8.unpack(s)
+        bmpId = Uint16LE.unpack(s)
+
+        flFlags = Uint32LE.unpack(s)
+        ulLeftWidth = Uint16LE.unpack(s)
+        ulRightWidth = Uint16LE.unpack(s)
+        ulTopHeight = Uint16LE.unpack(s)
+        ulBottomHeight = Uint16LE.unpack(s)
+        rgb = colorref(s)
+        # TODO: Allocate the bitmap entry
 
     def parse_stream_bitmap_first(self, s: BytesIO):
-        pass
+        """STREAM_BITMAP_FIRST"""
+        flags = Uint8.unpack(s)
+        bpp = Uint8.unpack(s)
+
+        # if bpp < 1 or bpp > 32: Invalid bpp
+
+        bitmapType = Uint16LE.unpack(s)
+        width = Uint16LE.unpack(s)
+        height = Uint16LE.unpack(s)
+
+        size = 0
+        if flags & STREAM_BITMAP_V2:
+            size = Uint32LE.unpack(s)
+        else:
+            size = Uint16LE.unpack(s)
+
+        blockSize = skip16(s)
 
     def parse_stream_bitmap_next(self, s: BytesIO):
-        pass
+        """STREAM_BITMAP_NEXT"""
+        flags = Uint8.unpack(s)
+        bitmapType = Uint16LE.unpack(s)
+        blockSize = skip16(s)
 
     def parse_gdiplus_first(self, s: BytesIO):
-        pass
+        """GDIPLUS_FIRST"""
+        s.read(1)  # Padding
+        cbSize = Uint16LE.unpack(s)  # TODO: Store cbSize
+        cbTotalSize = Uint32LE.unpack(s)
+        cbTotalEmfSize = Uint32LE.unpack(s)
+        emf = s.read(cbSize)
 
     def parse_gdiplus_next(self, s: BytesIO):
-        pass
+        """GDIPLUS_NEXT"""
+        s.read(1)  # Padding
+        emf = s.read(cbSize)  # TODO: Get cbSize from context
 
     def parse_gdiplus_end(self, s: BytesIO):
-        pass
+        """GDIPLUS_END"""
+        s.read(1)  # Padding
+        cbSize = Uint16LE.unpack(s)
+        cbTotalSize = Uint32LE.unpack(s)
+        cbTotalEmfSize = Uint32LE.unpack(s)
+        emf = s.read(cbSize)  # TODO: Get cbSize from context
 
     def parse_gdiplus_cache_first(self, s: BytesIO):
-        pass
+        """GDIPLUS_CACHE_FIRST"""
+        flags = Uint8LE.unpack(s)
+        cacheType = Uint16LE.unpack(s)
+        cacheIndex = Uint16LE.unpack(s)
+        cbSize = Uint16LE.unpack(s)
+        cbTotalSize = Uint32LE.unpack(s)
+        emf = s.read(cbSize)
 
     def parse_gdiplus_cache_next(self, s: BytesIO):
-        pass
+        """GDIPLUS_CACHE_NEXT"""
+        flags = Uint8LE.unpack(s)
+        cacheType = Uint16LE.unpack(s)
+        cacheIndex = Uint16LE.unpack(s)
+        emf = s.read(cbSize)
 
     def parse_gdiplus_cache_end(self, s: BytesIO):
-        pass
+        """GDIPLUS_CACHE_END"""
+        flags = Uint8LE.unpack(s)
+        cacheType = Uint16LE.unpack(s)
+        cacheIndex = Uint16LE.unpack(s)
+        cbSize = Uint16LE.unpack(s)
+        cbTotalSize = Uint32LE.unpack(s)
+        emf = s.read(cbSize)
 
     def parse_window(self, s: BytesIO):
+        """WINDOW"""
         # This is specified in MS-RDPERP for seamless applications.
         LOG.debug('WINDOW is not supported yet.')
 
     def parse_compdesk_first(self, s: BytesIO):
+        """COMPDESK"""
         LOG.debug('COMPDESK is not supported yet.')
 
     def parse_frame_marker(self, s: BytesIO):
-        pass
+        """FRAME_MARKER"""
+        action = Uint32LE.unpack(s)
 
 
 # Parser Lookup Tables
