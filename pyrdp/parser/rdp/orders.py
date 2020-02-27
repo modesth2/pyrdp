@@ -11,56 +11,21 @@ from pyrdp.core import Uint16LE, Uint8, Uint32LE
 from pyrdp.pdu.rdp.fastpath import FastPathOrdersEvent
 from pyrdp.enum.rdp import \
         GeneralExtraFlag
+from pyrdp.enum.orders import \
+        Primary, \
+        Secondary, \
+        Alternate, \
+        DrawingOrderControlFlags as ControlFlags
 
 LOG = logging.getLogger('pyrdp.fastpath.parser')
 
 # REFACTOR: Pull all of this into pyrdp.enum ---------------------------------------------------
-TS_STANDARD = 0x1
-TS_SECONDARY = 0x2
-
-
 def _repr(n) -> str:
     """
     Convert a drawing order type into a string.
     """
     r = n.__doc__
     return r if r else 'UNKNOWN (%02x)'.format(n)
-
-
-class Primary:
-    DSTBLT = 0x00
-    PATBLT = 0x01
-    SCRBLT = 0x02
-    DRAW_NINE_GRID = 0x07
-    MULTI_DRAW_NINE_GRID = 0x08
-    LINE_TO = 0x09
-    OPAQUE_RECT = 0x0A
-    SAVE_BITMAP = 0x0B
-    MEMBLT = 0x0D
-    MEM3BLT = 0x0E
-    MULTI_DSTBLT = 0x0F
-    MULTI_PATBLT = 0x10
-    MULTI_SCRBLT = 0x11
-    MULTI_OPAQUE_RECT = 0x12
-    FAST_INDEX = 0x13
-    POLYGON_SC = 0x14
-    POLYGON_CB = 0x15
-    POLYLINE = 0x16
-    FAST_GLYPH = 0x18
-    ELLIPSE_SC = 0x19
-    ELLIPSE_CB = 0x1A
-    GLYPH_INDEX = 0x1B
-
-
-class Secondary:
-    BITMAP_UNCOMPRESSED = 0x00
-    CACHE_COLOR_TABLE = 0x01
-    CACHE_BITMAP_COMPRESSED = 0x02
-    CACHE_GLYPH = 0x03
-    BITMAP_UNCOMPRESSED_V2 = 0x04
-    BITMAP_COMPRESSED_V2 = 0x05
-    CACHE_BRUSH = 0x07
-    BITMAP_COMPRESSED_V3 = 0x08
 
 
 # Secondary Specific Enums
@@ -71,24 +36,6 @@ CBR2_DO_NOT_CACHE = 0x10
 
 BITMAP_CACHE_WAITING_LIST_INDEX = 0x7FFF
 CG_GLYPH_UNICODE_PRESENT = 0x100
-
-
-class Alternate:
-    SWITCH_SURFACE = 0x00
-    CREATE_OFFSCREEN_BITMAP = 0x01
-    STREAM_BITMAP_FIRST = 0x02
-    STREAM_BITMAP_NEXT = 0x03
-    CREATE_NINE_GRID_BITMAP = 0x04
-    GDIPLUS_FIRST = 0x05
-    GDIPLUS_NEXT = 0x06
-    GDIPLUS_END = 0x07
-    GDIPLUS_CACHE_FIRST = 0x08
-    GDIPLUS_CACHE_NEXT = 0x09
-    GDIPLUS_CACHE_END = 0x0A
-    WINDOW = 0x0B
-    COMPDESK_FIRST = 0x0C
-    FRAME_MARKER = 0x0D
-
 
 # 2.2.2.2.1.2.3
 CBR2_BPP = [0, 0, 0, 8, 16, 24, 32]
@@ -171,10 +118,10 @@ class OrdersParser:
     def parse_order(self, s: BytesIO):
         controlFlags = Uint8.unpack(s)
 
-        if not (controlFlags & TS_STANDARD):
+        if not (controlFlags & ControlFlags.TS_STANDARD):
             print('Type: ALTSEC')  # DEBUG
             self.parse_altsec(s, controlFlags)
-        elif (controlFlags & TS_SECONDARY):
+        elif (controlFlags & ControlFlags.TS_SECONDARY):
             print('Type: SECONDARY')  # DEBUG
             self.parse_secondary(s, controlFlags)
         else:
