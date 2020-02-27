@@ -317,6 +317,8 @@ class OrdersParser:
     def parse_cache_glyph(self, s: BytesIO, orderType: int, flags: int):
         """CACHE_GLYPH"""
         # 2.2.2.2.1.2.5
+        # FIXME: Need to know from capabilities whether the server is sending V1 or V2 glyph caches.
+        #        currently only V1 is implemented.
         cacheId = Uint8.unpack(s)
         cGlyphs = Uint8.unpack(s)
 
@@ -375,11 +377,58 @@ class OrdersParser:
 
     def parse_cache_brush(self, s: BytesIO, orderType: int, flags: int):
         """CACHE_BRUSH"""
-        pass
+        # 2.2.2.2.1.2.7
+        cacheIndex = Uint8.unpack(s)
+        iBitmapFormat = Uint8.unpack(s)
+        assert iBitmapFormat >= 0 and iBitmapFormat < len(BMF_BPP)
+
+        bpp = BMF_BPP[iBitmapFormat]
+
+        cx = Uint8LE.unpack(s)
+        cy = Uint8LE.unpack(s)
+        style = Uint8LE.unpack(s)
+        iBytes = Uint8LE.unpack(s)
+
+        compressed = False
+        if cx == 8 and cy == 8 and bpp == 1:  # 8x8 mono bitmap
+            data = s.read(8)[::-1]
+        elif bpp == 8 and iBytes == 20:
+            compressed = True
+        elif bpp == 16 and iBytes == 24:
+            compressed = True
+        elif bpp == 24 and iBytes == 32:
+            compressed = True
+
+        if compressed:  # Move this to brush object?
+            print('BRUSH DECOMPRESSION IS NOT IMPLEMENTED')  # DEBUG
+            data = self.decompress_brush(s, bpp)
+        else:
+            data = bytes(256)  # Preallocate
+            scanline = (bpp // 8) * 8
+            for i in range(7):
+                # TODO: Verify correctness
+                print(scanline)  # DEBUG
+                offset = (7-i)*scanline
+                data[o:o+8] = s.read(scanline)
 
     def parse_cache_bitmap_v3(self, s: BytesIO, orderType: int, flags: int):
         """CACHE_BITMAP_V3"""
-        pass
+        cacheId = flags & 0x00000003
+        flags = (flags & 0x0000FF80) >> 7
+        bitsPerPixelId = (flags & 0x00000078) >> 3
+        bpp = CBR23_BPP[bitsPerPixelId]
+
+        cacheIndex = Uint16LE.unpack(s)
+        key1 = Uint32LE.unpack(s)
+        key2 = Uint32LE.unpack(s)
+
+        s.read(2)  # Reserved (2 bytes)
+        codecId = Uint8.unpack(s)
+        width = Uint16LE.unpack(s)
+        height = Uint16LE.unpack(s)
+        dataLen = Uint32LE.unpack(s)
+
+        data = s.read(dataLen)
 
     # Alternate secondary drawing orders.
     # ----------------------------------------------------------------------
@@ -510,6 +559,9 @@ class OrdersParser:
     def parse_frame_marker(self, s: BytesIO):
         """FRAME_MARKER"""
         action = Uint32LE.unpack(s)
+
+    def decompress_brush(self, s: BytesIO, bpp: int):
+        pass
 
 
 # Parser Lookup Tables
