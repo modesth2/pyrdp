@@ -18,3 +18,7 @@ CBR2_HEIGHT_SAME_AS_WIDTH = 0x01
 CBR2_PERSISTENT_KEY_PRESENT = 0x02
 CBR2_NO_BITMAP_COMPRESSION_HDR = 0x08
 CBR2_DO_NOT_CACHE = 0x10
+
+
+class SecondaryContext:
+    """Secondary drawing order context."""
