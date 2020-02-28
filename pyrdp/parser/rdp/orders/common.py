@@ -42,7 +42,3 @@ def read_color(s: BytesIO):
 
 def read_utf16_str(s: BytesIO, size: int) -> bytes:
     return bytes([Uint16LE.unpack(s) for _ in range(size)])  # Decode into str?
-
-
-def read_field_flags(s: BytesIO):
-    pass

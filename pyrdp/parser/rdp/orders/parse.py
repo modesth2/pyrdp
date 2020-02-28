@@ -73,10 +73,11 @@ class OrdersParser:
     # Primary drawing orders.
     # ----------------------------------------------------------------------
     def _parse_primary(self, s: BytesIO, flags: int):
-        if flags & ControlFlags.TS_TYPE_CHANGE:
-            orderType = Uint8.unpack(s)
 
-        read_field_flags(s)  # TODO:
+        orderType = self.ctx.update(s, flags)
+
+        fp = _pri[orderType]
+        print(f'Order: {_repr(fp)}')  # DEBUG
 
     def _parse_dstblt(self, s: BytesIO):
         """DSTBLT"""
