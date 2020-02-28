@@ -19,6 +19,11 @@ from pyrdp.parser.rdp.orders.secondary import CBR2_BPP, CBR23_BPP, BMF_BPP, \
     CBR2_HEIGHT_SAME_AS_WIDTH, CBR2_PERSISTENT_KEY_PRESENT, CBR2_NO_BITMAP_COMPRESSION_HDR, CBR2_DO_NOT_CACHE
 
 from .context import GdiContext, GdiContextObserver
+from .alternate import CreateOffscreenBitmap, SwitchSurface, CreateNineGridBitmap, \
+    StreamBitmapFirst, StreamBitmapNext, GdiPlusFirst, GdiPlusNext, GdiPlusEnd, GdiPlusCacheFirst, \
+    GdiPlusCacheNext, GdiPlusCacheEnd, FrameMarker
+
+from .common import read_encoded_uint16, read_encoded_uint32, read_utf16_str, read_color, read_field_flags
 
 LOG = logging.getLogger('pyrdp.fastpath.parser')
 
@@ -28,53 +33,9 @@ CG_GLYPH_UNICODE_PRESENT = 0x100
 
 
 def _repr(n):
-    """Convert a drawing order type into a string."""
+    """Internal method to stringify an order type."""
     r = n.__doc__
     return r if r else 'UNKNOWN (%02x)'.format(n)
-
-
-# These are encoding optimizations proper to Draw Orders
-def read_encoded_uint16(s: BytesIO) -> int:
-    """Read an encoded UINT16."""
-    # 2.2.2.2.1.2.1.3
-    b = Uint8.unpack(s)
-    if b & 0x80:
-        return (b & 0x7F) << 8 | Uint8.unpack(s)
-    else:
-        return b & 0x7F
-
-
-def read_encoded_uint32(s: BytesIO) -> int:
-    # 2.2.2.2.1.2.1.4
-    b = Uint8.unpack(s)
-    n = (b & 0xC0) >> 6
-    if n == 0:
-        return b & 0x3F
-    elif n == 1:
-        return (b & 0x3F) << 8 | Uint8.unpack(s)
-    elif n == 2:
-        return ((b & 0x3F) << 16 | Uint8.unpack(s) << 8 | Uint8.unpack(s))
-    else:  # 3
-        return ((b & 0x3F) << 24 |
-                Uint8.unpack(s) << 16 |
-                Uint8.unpack(s) << 8 |
-                Uint8.unpack(s))
-
-
-def read_color(s: BytesIO):
-    """
-    2.2.2.2.1.3.4.1.1 TS_COLORREF ->  rgb
-    2.2.2.2.1.2.4.1   TS_COLOR_QUAD -> bgr
-    """
-    return Uint32LE.unpack(s) & 0x00FFFFFF
-
-
-def read_utf16_str(s: BytesIO, size: int) -> bytes:
-    return bytes([Uint16LE.unpack(s) for _ in range(size)])  # Decode into str?
-
-
-def read_field_flags(s: BytesIO):
-    pass
 
 
 class OrdersParser:
@@ -383,108 +344,47 @@ class OrdersParser:
 
     def _parse_create_offscreen_bitmap(self, s: BytesIO):
         """CREATE_OFFSCREEN_BITMAP"""
-        flags = Uint16LE.unpack(s)
-        bitmapId = flags & 0x7FFF
-        delete = flags & 0x8000 != 0
-        cx = Uint16LE.unpack(s)
-        cy = Uint16LE.unpack(s)
-        # TODO: Create new bitmap entry (Through an observer?)
-
-        # Handle delete list
-        # TODO: Update cache (in python this can be a dict.)
-        if delete:
-            cIndices = Uint16LE.unpack(s)
-            for _ in range(cIndices):
-                i = Uint16LE.unpack(s)
-                # TODO: Delete bitmap from cache.
+        self.notify.createOffscreenBitmap(CreateOffscreenBitmap.parse(s))
 
     def _parse_switch_surface(self, s: BytesIO):
         """SWITCH_SURFACE"""
-        surfaceId = Uint16LE.unpack(s)
+        self.notify.switchSurface(SwitchSurface.parse(s))
 
     def _parse_create_nine_grid_bitmap(self, s: BytesIO):
         """CREATE_NINEGRID_BITMAP"""
-        bpp = Uint8.unpack(s)
-        bmpId = Uint16LE.unpack(s)
-
-        flFlags = Uint32LE.unpack(s)
-        ulLeftWidth = Uint16LE.unpack(s)
-        ulRightWidth = Uint16LE.unpack(s)
-        ulTopHeight = Uint16LE.unpack(s)
-        ulBottomHeight = Uint16LE.unpack(s)
-        rgb = colorref(s)
-        # TODO: Allocate the bitmap entry
+        self.notify.createNineGridBitmap(CreateNineGridBitmap.parse(s))
 
     def _parse_stream_bitmap_first(self, s: BytesIO):
         """STREAM_BITMAP_FIRST"""
-        flags = Uint8.unpack(s)
-        bpp = Uint8.unpack(s)
-
-        # if bpp < 1 or bpp > 32: Invalid bpp
-
-        bitmapType = Uint16LE.unpack(s)
-        width = Uint16LE.unpack(s)
-        height = Uint16LE.unpack(s)
-
-        size = 0
-        if flags & STREAM_BITMAP_V2:
-            size = Uint32LE.unpack(s)
-        else:
-            size = Uint16LE.unpack(s)
-
-        blockSize = skip16(s)
+        self.notify.streamBitmapFirst(StreamBitmapFirst.parse(s))
 
     def _parse_stream_bitmap_next(self, s: BytesIO):
         """STREAM_BITMAP_NEXT"""
-        flags = Uint8.unpack(s)
-        bitmapType = Uint16LE.unpack(s)
-        blockSize = skip16(s)
+        self.notify.streamBitmapNext(StreamBitmapNext.parse(s))
 
     def _parse_gdiplus_first(self, s: BytesIO):
         """GDIPLUS_FIRST"""
-        s.read(1)  # Padding
-        cbSize = Uint16LE.unpack(s)  # TODO: Store cbSize
-        cbTotalSize = Uint32LE.unpack(s)
-        cbTotalEmfSize = Uint32LE.unpack(s)
-        emf = s.read(cbSize)
+        self.notify.GdiPlusFirst(GdiPlusFirst.parse(s))
 
     def _parse_gdiplus_next(self, s: BytesIO):
         """GDIPLUS_NEXT"""
-        s.read(1)  # Padding
-        emf = s.read(cbSize)  # TODO: Get cbSize from context
+        self.notify.GdiPlusNext(GdiPlusNext.parse(s))
 
     def _parse_gdiplus_end(self, s: BytesIO):
         """GDIPLUS_END"""
-        s.read(1)  # Padding
-        cbSize = Uint16LE.unpack(s)
-        cbTotalSize = Uint32LE.unpack(s)
-        cbTotalEmfSize = Uint32LE.unpack(s)
-        emf = s.read(cbSize)  # TODO: Get cbSize from context
+        self.notify.GdiPlusEnd(GdiPlusEnd.parse(s))
 
     def _parse_gdiplus_cache_first(self, s: BytesIO):
         """GDIPLUS_CACHE_FIRST"""
-        flags = Uint8.unpack(s)
-        cacheType = Uint16LE.unpack(s)
-        cacheIndex = Uint16LE.unpack(s)
-        cbSize = Uint16LE.unpack(s)
-        cbTotalSize = Uint32LE.unpack(s)
-        emf = s.read(cbSize)
+        self.notify.GdiPlusCacheFirst(GdiPlusCacheFirst.parse(s))
 
     def _parse_gdiplus_cache_next(self, s: BytesIO):
         """GDIPLUS_CACHE_NEXT"""
-        flags = Uint8.unpack(s)
-        cacheType = Uint16LE.unpack(s)
-        cacheIndex = Uint16LE.unpack(s)
-        emf = s.read(cbSize)
+        self.notify.GdiPlusCacheNext(GdiPlusCacheNext.parse(s))
 
     def _parse_gdiplus_cache_end(self, s: BytesIO):
         """GDIPLUS_CACHE_END"""
-        flags = Uint8.unpack(s)
-        cacheType = Uint16LE.unpack(s)
-        cacheIndex = Uint16LE.unpack(s)
-        cbSize = Uint16LE.unpack(s)
-        cbTotalSize = Uint32LE.unpack(s)
-        emf = s.read(cbSize)
+        self.notify.GdiPlusCacheEnd(GdiPlusCacheEnd.parse(s))
 
     def _parse_window(self, s: BytesIO):
         """WINDOW"""
@@ -497,7 +397,7 @@ class OrdersParser:
 
     def _parse_frame_marker(self, s: BytesIO):
         """FRAME_MARKER"""
-        action = Uint32LE.unpack(s)
+        self.notify.frameMarker(FrameMarker.parse(s))
 
     def decompress_brush(self, s: BytesIO, bpp: int):
         pass

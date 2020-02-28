@@ -12,6 +12,10 @@ from .secondary import SecondaryContext as Secondary
 from .primary import PrimaryContext as Primary
 from .alternate import AlternateContext as Alternate
 
+from .alternate import CreateOffscreenBitmap, SwitchSurface, CreateNineGridBitmap, \
+    StreamBitmapFirst, StreamBitmapNext, GdiPlusFirst, GdiPlusNext, GdiPlusEnd, GdiPlusCacheFirst, \
+    GdiPlusCacheNext, GdiPlusCacheEnd, FrameMarker
+
 
 class GdiContext:
     """
@@ -128,38 +132,47 @@ class GdiContextObserver:
         pass
 
     # Alternate Secondary Handlers
-    def frameMarker(self, action: int):
+    def frameMarker(self, state: FrameMarker):
         pass
 
-    def createOffscreenBitmap(self, state):
+    def createOffscreenBitmap(self, state: CreateOffscreenBitmap):
+        """
+        Create an offscreen bitmap.
+        """
         pass
 
-    def switchSurface(self, state):
+    def switchSurface(self, state: SwitchSurface):
+        """
+        Switch drawing surface.
+        """
         pass
 
-    def createNineGridBitmap(self, state):
+    def createNineGridBitmap(self, state: CreateNineGridBitmap):
+        """
+        Create a Nine Grid bitmap.
+        """
         pass
 
-    def streamBitmapFirst(self, state):
+    def streamBitmapFirst(self, state: StreamBitmapFirst):
         pass
 
-    def streamBitmapNext(self, state):
+    def streamBitmapNext(self, state: StreamBitmapNext):
         pass
 
-    def drawGdiPlusFirst(self, state):
+    def drawGdiPlusFirst(self, state: GdiPlusFirst):
         pass
 
-    def drawGdiPlusNext(self, state):
+    def drawGdiPlusNext(self, state: GdiPlusNext):
         pass
 
-    def drawGdiPlusEnd(self, state):
+    def drawGdiPlusEnd(self, state: GdiPlusEnd):
         pass
 
-    def drawGdiPlusCacheFirst(self, state):
+    def drawGdiPlusCacheFirst(self, state: GdiPlusCacheFirst):
         pass
 
-    def drawGdiPlusCacheNext(self, state):
+    def drawGdiPlusCacheNext(self, state: GdiPlusCacheNext):
         pass
 
-    def drawGdiPlusCacheEnd(self, state):
+    def drawGdiPlusCacheEnd(self, state: GdiPlusCacheEnd):
         pass
