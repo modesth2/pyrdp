@@ -15,21 +15,17 @@ from pyrdp.enum.rdp import GeneralExtraFlag
 from pyrdp.enum.orders import Secondary, \
         DrawingOrderControlFlags as ControlFlags
 
-from pyrdp.parser.rdp.orders.secondary import CBR2_BPP, CBR23_BPP, BMF_BPP, \
-    CBR2_HEIGHT_SAME_AS_WIDTH, CBR2_PERSISTENT_KEY_PRESENT, CBR2_NO_BITMAP_COMPRESSION_HDR, CBR2_DO_NOT_CACHE
-
 from .context import GdiContext, GdiContextObserver
+
 from .alternate import CreateOffscreenBitmap, SwitchSurface, CreateNineGridBitmap, \
     StreamBitmapFirst, StreamBitmapNext, GdiPlusFirst, GdiPlusNext, GdiPlusEnd, GdiPlusCacheFirst, \
     GdiPlusCacheNext, GdiPlusCacheEnd, FrameMarker
 
+from .secondary import CacheBitmapV1, CacheColorTable, CacheGlyph, CacheBitmapV2, CacheBrush, CacheBitmapV3
+
 from .common import read_encoded_uint16, read_encoded_uint32, read_utf16_str, read_color, read_field_flags
 
 LOG = logging.getLogger('pyrdp.fastpath.parser')
-
-# REFACTOR: Pull these constants.
-BITMAP_CACHE_WAITING_LIST_INDEX = 0x7FFF
-CG_GLYPH_UNICODE_PRESENT = 0x100
 
 
 def _repr(n):
@@ -190,145 +186,32 @@ class OrdersParser:
 
     def _parse_cache_bitmap_v1(self, s: BytesIO, orderType: int, flags: int):
         """CACHE_BITMAP_V1"""
-        cacheId = Uint8.unpack(s)
-        s.read(1)  # Padding
-        bitmapWidth = Uint8.unpack(s)
-        bitmapHeight = Uint8.unpack(s)
-        bitmapBpp = Uint8.unpack(s)
-
-        bitmapLength = Uint16LE.unpack(s)
-        cacheIndex = Uint16LE.unpack(s)
-
-        if orderType & Secondary.CACHE_BITMAP_COMPRESSED and \
-           not flags & GeneralExtraFlag.NO_BITMAP_COMPRESSION_HDR:
-            compression = s.read(8)
-            bitmapLength -= 8
-
-        data = s.read(bitmapLength)
+        self.notify.cacheBitmapV1(CacheBitmapV1.parse(s, orderType, flags))
 
     def _parse_cache_color_table(self, s: BytesIO, orderType: int, flags: int):
         """CACHE_COLOR_TABLE"""
-        cacheIndex = Uint8.unpack(s)
-        numberColors = Uint16LE.unpack(s)
-
-        assert numberColors == 256
-        colors = [read_color(s) for _ in range(numberColors)]
+        self.notify.cacheColorTable(CacheColorTable.parse(s, orderType, flags))
 
     def _parse_cache_glyph(self, s: BytesIO, orderType: int, flags: int):
         """CACHE_GLYPH"""
-        # 2.2.2.2.1.2.5
         # FIXME: Need to know from capabilities whether the server is sending V1 or V2 glyph caches.
         #        currently only V1 is implemented.
-        cacheId = Uint8.unpack(s)
-        cGlyphs = Uint8.unpack(s)
-
-        for _ in range(cGlyphs):
-            cacheIndex = Uint16LE.unpack(s)
-            cx = Uint16LE.unpack(s)
-            cy = Uint16LE.unpack(s)
-
-            cb = ((cx + 7) / 8) * cy
-            cb += 4 - (cb % 4) if ((cb % 4) > 0) else 0
-
-            aj = s.read(cb)
-            # onGlyph
-
-        if flags & CG_GLYPH_UNICODE_PRESENT and cGlyphs > 0:
-            unicodeChars = read_utf16_str(s, cGlyphs)
-
-        # onGlyphUnicodeChars
+        if True:  # glyphV1
+            self.notify.cacheGlyph(CacheGlyph.parse(s, flags))
+        # else:
+        #     self.notify.cacheGlyphV2(CacheGlyphV2.parse(s, flags))
 
     def _parse_cache_bitmap_v2(self, s: BytesIO, orderType: int, flags: int):
         """CACHE_BITMAP_V2"""
-        # 2.2.2.2.1.2.3
-        cacheId = flags & 0x0003
-        bitmapFlags = (flags & 0xFF80) >> 7
-        bpp = CBR2_BPP[(flags & 0x0078) >> 3]
-
-        if bitmapFlags & CBR2_PERSISTENT_KEY_PRESENT:
-            key1 = Uint32LE.unpack(s)
-            key2 = Uint32LE.unpack(s)
-
-        if bitmapFlags & CBR2_HEIGHT_SAME_AS_WIDTH:
-            h = w = read_encoded_uint16(s)
-        else:
-            w = read_encoded_uint16(s)
-            h = read_encoded_uint16(s)
-
-        bitmapLength = read_encoded_uint32(s)
-        cacheIndex = read_encoded_uint16(s)
-
-        if bitmapFlags & CBR2_DO_NOT_CACHE:
-            cacheIndex = BITMAP_CACHE_WAITING_LIST_INDEX
-
-        if orderType & Secondary.BITMAP_COMPRESSED_V2 and not \
-           (bitmapFlags & CBR2_NO_BITMAP_COMPRESSION_HDR):
-            # Parse compression header
-            cbCompFirstRowSize = Uint16LE.unpack(s)
-            cbCompMainBodySize = Uint16LE.unpack(s)
-            cbScanWidth = Uint16LE.unpack(s)
-            cbUncompressedSize = Uint16LE.unpack(s)
-
-            bitmapLength = cbCompMainBodySize
-
-        # Read bitmap data
-        data = s.read(bitmapLength)
-        print(data)  # DEBUG
+        self.notify.cacheBitmapV2(CacheBitmapV2.parse(s, orderType, flags))
 
     def _parse_cache_brush(self, s: BytesIO, orderType: int, flags: int):
         """CACHE_BRUSH"""
-        # 2.2.2.2.1.2.7
-        cacheIndex = Uint8.unpack(s)
-        iBitmapFormat = Uint8.unpack(s)
-        assert iBitmapFormat >= 0 and iBitmapFormat < len(BMF_BPP)
-
-        bpp = BMF_BPP[iBitmapFormat]
-
-        cx = Uint8.unpack(s)
-        cy = Uint8.unpack(s)
-        style = Uint8.unpack(s)
-        iBytes = Uint8.unpack(s)
-
-        compressed = False
-        if cx == 8 and cy == 8 and bpp == 1:  # 8x8 mono bitmap
-            data = s.read(8)[::-1]
-        elif bpp == 8 and iBytes == 20:
-            compressed = True
-        elif bpp == 16 and iBytes == 24:
-            compressed = True
-        elif bpp == 24 and iBytes == 32:
-            compressed = True
-
-        if compressed:  # Move this to brush object?
-            print('BRUSH DECOMPRESSION IS NOT IMPLEMENTED')  # DEBUG
-            data = self.decompress_brush(s, bpp)
-        else:
-            data = bytes(256)  # Preallocate
-            scanline = (bpp // 8) * 8
-            for i in range(7):
-                # TODO: Verify correctness
-                print(scanline)  # DEBUG
-                o = (7-i)*scanline
-                data[o:o+8] = s.read(scanline)
+        self.notify.cacheBrush(CacheBrush.parse(s))
 
     def _parse_cache_bitmap_v3(self, s: BytesIO, orderType: int, flags: int):
         """CACHE_BITMAP_V3"""
-        cacheId = flags & 0x00000003
-        flags = (flags & 0x0000FF80) >> 7
-        bitsPerPixelId = (flags & 0x00000078) >> 3
-        bpp = CBR23_BPP[bitsPerPixelId]
-
-        cacheIndex = Uint16LE.unpack(s)
-        key1 = Uint32LE.unpack(s)
-        key2 = Uint32LE.unpack(s)
-
-        s.read(2)  # Reserved (2 bytes)
-        codecId = Uint8.unpack(s)
-        width = Uint16LE.unpack(s)
-        height = Uint16LE.unpack(s)
-        dataLen = Uint32LE.unpack(s)
-
-        data = s.read(dataLen)
+        self.notify.cacheBitmapV3(CacheBitmapV3.parse(s, flags))
 
     # Alternate secondary drawing orders.
     # ----------------------------------------------------------------------
@@ -398,9 +281,6 @@ class OrdersParser:
     def _parse_frame_marker(self, s: BytesIO):
         """FRAME_MARKER"""
         self.notify.frameMarker(FrameMarker.parse(s))
-
-    def decompress_brush(self, s: BytesIO, bpp: int):
-        pass
 
 
 # Parser Lookup Tables
