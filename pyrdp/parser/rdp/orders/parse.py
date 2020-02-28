@@ -18,6 +18,8 @@ from pyrdp.enum.orders import Secondary, \
 from pyrdp.parser.rdp.orders.secondary import CBR2_BPP, CBR23_BPP, BMF_BPP, \
     CBR2_HEIGHT_SAME_AS_WIDTH, CBR2_PERSISTENT_KEY_PRESENT, CBR2_NO_BITMAP_COMPRESSION_HDR, CBR2_DO_NOT_CACHE
 
+from .context import GdiContext, GdiContextObserver
+
 LOG = logging.getLogger('pyrdp.fastpath.parser')
 
 # REFACTOR: Pull these constants.
@@ -80,9 +82,15 @@ class OrdersParser:
     Drawing Order Parser.
     """
 
-    def __init__(self):
-        # TODO: Create GDI state here.
+    def __init__(self, observer: GdiContextObserver = None):
+        """
+        Create a drawing order parser.
+
+        :param GdiContextObserver observer: The object to notify of context updates.
+        """
         self.orders: FastPathOrdersEvent = None
+        self.ctx: GdiContext = GdiContext()
+        self.notify: GdiContextObserver = observer if observer else GdiContextObserver()
 
     def parse(self, orders: FastPathOrdersEvent, s: BytesIO):
         """
