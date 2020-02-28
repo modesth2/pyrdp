@@ -11,10 +11,6 @@ STREAM_BITMAP_COMPRESSED = 0x02
 STREAM_BITMAP_V2 = 0x04
 
 
-class AlternateContext:
-    """Alternate Secondary drawing order context."""
-
-
 class CreateOffscreenBitmap:
     @staticmethod
     def parse(s: BytesIO) -> 'CreateOffscreenBitmap':

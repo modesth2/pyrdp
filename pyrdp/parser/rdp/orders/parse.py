@@ -9,21 +9,17 @@ Parse Drawing Orders.
 import logging
 from io import BytesIO
 
-from pyrdp.core import Uint16LE, Uint8, Uint32LE
+from pyrdp.core.packing import Uint8, Uint16LE
 from pyrdp.pdu.rdp.fastpath import FastPathOrdersEvent
-from pyrdp.enum.rdp import GeneralExtraFlag
-from pyrdp.enum.orders import Secondary, \
-        DrawingOrderControlFlags as ControlFlags
+from pyrdp.enum.orders import DrawingOrderControlFlags as ControlFlags
 
-from .context import GdiContext, GdiContextObserver
-
+from .context import GdiContextObserver
+from .secondary import CacheBitmapV1, CacheColorTable, CacheGlyph, CacheBitmapV2, CacheBrush, CacheBitmapV3
 from .alternate import CreateOffscreenBitmap, SwitchSurface, CreateNineGridBitmap, \
     StreamBitmapFirst, StreamBitmapNext, GdiPlusFirst, GdiPlusNext, GdiPlusEnd, GdiPlusCacheFirst, \
     GdiPlusCacheNext, GdiPlusCacheEnd, FrameMarker
+from .primary import PrimaryContext as Context
 
-from .secondary import CacheBitmapV1, CacheColorTable, CacheGlyph, CacheBitmapV2, CacheBrush, CacheBitmapV3
-
-from .common import read_encoded_uint16, read_encoded_uint32, read_utf16_str, read_color, read_field_flags
 
 LOG = logging.getLogger('pyrdp.fastpath.parser')
 
@@ -46,8 +42,8 @@ class OrdersParser:
         :param GdiContextObserver observer: The object to notify of context updates.
         """
         self.orders: FastPathOrdersEvent = None
-        self.ctx: GdiContext = GdiContext()
         self.notify: GdiContextObserver = observer if observer else GdiContextObserver()
+        self.ctx = Context()
 
     def parse(self, orders: FastPathOrdersEvent, s: BytesIO):
         """

@@ -8,9 +8,7 @@ Drawing Order Context.
 
 """
 
-from .secondary import SecondaryContext as Secondary
 from .primary import PrimaryContext as Primary
-from .alternate import AlternateContext as Alternate
 
 from .alternate import CreateOffscreenBitmap, SwitchSurface, CreateNineGridBitmap, \
     StreamBitmapFirst, StreamBitmapNext, GdiPlusFirst, GdiPlusNext, GdiPlusEnd, GdiPlusCacheFirst, \
@@ -27,9 +25,7 @@ class GdiContext:
 
     def __init__(self):
         """Create a default GDI context."""
-        self.secondary: Secondary = Secondary()
         self.primary: Primary = Primary()
-        self.altsec: Alternate = Alternate()
 
 
 class GdiContextObserver:

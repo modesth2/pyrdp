@@ -29,10 +29,6 @@ BITMAP_CACHE_WAITING_LIST_INDEX = 0x7FFF
 CG_GLYPH_UNICODE_PRESENT = 0x100
 
 
-class SecondaryContext:
-    """Secondary drawing order context."""
-
-
 class CacheBitmapV1:
     @staticmethod
     def parse(s: BytesIO, orderType: int, flags: int) -> 'CacheBitmapV1':
