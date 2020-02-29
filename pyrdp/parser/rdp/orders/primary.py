@@ -4,7 +4,7 @@ Constants and state for Primary Drawing Orders.
 from io import BytesIO
 
 from pyrdp.enum.orders import DrawingOrderControlFlags as ControlFlags
-from pyrdp.core.packing import Uint8, Int8, Int16LE
+from pyrdp.core.packing import Uint8, Int8, Int16LE, Uint16LE
 
 # This follows the PrimaryDrawOrderType enum
 ORDERTYPE_FIELDBYTES = [1, 2, 1, 0, 0, 0, 0, 1, 1, 2, 1, 1, 0, 2, 3, 1, 2, 2, 2, 2, 1, 2, 1, 0, 2, 1, 2, 3]
@@ -21,6 +21,8 @@ BOUND_DELTA_BOTTOM = 0x80
 
 def read_field_flags(s: BytesIO, flags: int, orderType: int) -> int:
     """Reads encoded field flags."""
+
+    # REFACTOR: This could be internal to the context class.
     assert orderType >= 0 and orderType < len(ORDERTYPE_FIELDBYTES)
 
     fieldBytes = ORDERTYPE_FIELDBYTES[orderType]
@@ -40,6 +42,13 @@ def read_field_flags(s: BytesIO, flags: int, orderType: int) -> int:
         fieldFlags |= Uint8.unpack(s) << (i * 8)
 
     return fieldFlags
+
+
+def read_coord(s: BytesIO, delta: bool, prev: int):
+    if delta:
+        return prev + Int8.unpack(s)
+    else:
+        return Int16LE.unpack(s)
 
 
 class Bounds:
@@ -93,6 +102,8 @@ class PrimaryContext:
         # Whether the current draw order is bounded by a rectangle..
         self.bounded: bool = False
 
+        self.memBlt = MemBlt(self)
+
     def update(self, s: BytesIO, flags: int):
         """
         Update the context when parsing a new primary order.
@@ -123,6 +134,9 @@ class PrimaryContext:
         self.deltaCoords = flags & ControlFlags.TS_DELTA_COORDS != 0
 
         return self.orderType
+
+    def field(self, n: int):
+        return self.fieldFlags & (1 << (n - 1))
 
 
 class DstBlt:
@@ -190,9 +204,38 @@ class SaveBitmap:
 
 
 class MemBlt:
-    @staticmethod
-    def parse(s: BytesIO, ctx: PrimaryContext) -> 'MemBlt':
-        self = MemBlt()
+    def __init__(self, ctx: PrimaryContext):
+        self.ctx = ctx
+        self.leftRect = self.topRect = self.width = self.height = 0
+        self.x = self.y = 0
+        self.cacheIndex = 0
+        self.cacheId = 0
+        self.colorIndex = 0
+
+    def update(self, s: BytesIO) -> 'MemBlt':
+        ctx = self.ctx
+
+        # How to make this nice?
+        if ctx.field(1): self.cacheId = Uint16LE.unpack(s)  # NOQA
+        if ctx.field(2):
+            self.leftRect = read_coord(s, ctx.deltaCoords, self.leftRect)
+        if ctx.field(3):
+            self.topRect = read_coord(s, ctx.deltaCoords, self.topRect)
+        if ctx.field(4):
+            self.width = read_coord(s, ctx.deltaCoords, self.width)
+        if ctx.field(5):
+            self.height = read_coord(s, ctx.deltaCoords, self.leftRect)
+        if ctx.field(6):
+            self.rop = Uint8.unpack(s)
+        if ctx.field(7):
+            self.x = read_coord(s, ctx.deltaCoords, self.x)
+        if ctx.field(8):
+            self.y = read_coord(s, ctx.deltaCoords, self.y)
+        if ctx.field(9):
+            self.cacheIndex = Uint16LE.unpack(s)
+
+        self.colorIndex = self.cacheId >> 8
+        self.cacheId = self.cacheId & 0xFF
 
         return self
 

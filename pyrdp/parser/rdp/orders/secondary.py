@@ -131,7 +131,6 @@ class CacheBitmapV2:
 
         # Read bitmap data
         self.data = s.read(bitmapLength)
-        print(self.data)  # DEBUG
 
         return self
 

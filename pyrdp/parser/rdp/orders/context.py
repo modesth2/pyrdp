@@ -66,19 +66,19 @@ class GdiContextObserver:
     def saveBitmap(self, state):
         pass
 
-    def memblt(self, state):
+    def memBlt(self, state):
         pass
 
-    def mem3blt(self, state):
+    def mem3Blt(self, state):
         pass
 
-    def multiDstblt(self, state):
+    def multiDstBlt(self, state):
         pass
 
-    def multiPatblt(self, state):
+    def multiPatBlt(self, state):
         pass
 
-    def multiScrblt(self, state):
+    def multiScrBlt(self, state):
         pass
 
     def multiOpaqueRect(self, state):
@@ -93,7 +93,7 @@ class GdiContextObserver:
     def polygonCb(self, state):
         pass
 
-    def polyline(self, state):
+    def polyLine(self, state):
         pass
 
     def fastGlyph(self, state):
