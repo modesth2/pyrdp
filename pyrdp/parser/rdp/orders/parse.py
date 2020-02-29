@@ -81,35 +81,35 @@ class OrdersParser:
 
     def _parse_dstblt(self, s: BytesIO):
         """DSTBLT"""
-        self.notify.dstBlt(DstBlt.parse(s, self.ctx))
+        self.notify.dstBlt(self.ctx.dstBlt.update(s))
 
     def _parse_patblt(self, s: BytesIO):
         """PATBLT"""
-        self.notify.patBlt(PatBlt.parse(s, self.ctx))
+        self.notify.patBlt(self.ctx.patBlt.update(s))
 
     def _parse_scrblt(self, s: BytesIO):
         """SCRBLT"""
-        self.notify.scrBlt(ScrBlt.parse(s, self.ctx))
+        self.notify.scrBlt(self.ctx.scrBlt.update(s))
 
     def _parse_draw_nine_grid(self, s: BytesIO):
         """DRAW_NINE_GRID"""
-        self.notify.drawNineGrid(DrawNineGrid.parse(s, self.ctx))
+        self.notify.drawNineGrid(self.ctx.drawNineGrid.update(s))
 
     def _parse_multi_draw_nine_grid(self, s: BytesIO):
         """MULTI_DRAW_NINE_GRID"""
-        self.notify.multiDrawNineGrid(MultiDrawNineGrid.parse(s, self.ctx))
+        self.notify.multiDrawNineGrid(self.ctx.multiDrawNineGrid.update(s))
 
     def _parse_line_to(self, s: BytesIO):
         """LINE_TO"""
-        self.notify.lineTo(LineTo.parse(s, self.ctx))
+        self.notify.lineTo(self.ctx.lineTo.update(s))
 
     def _parse_opaque_rect(self, s: BytesIO):
         """OPAQUE_RECT"""
-        self.notify.opaqueRec(OpaqueRect.parse(s, self.ctx))
+        self.notify.opaqueRec(self.ctx.opaqueRect.update(s))
 
     def _parse_save_bitmap(self, s: BytesIO):
         """SAVE_BITMAP"""
-        self.notify.saveBitmap(SaveBitmap.parse(s, self.ctx))
+        self.notify.saveBitmap(self.ctx.saveBitmap.update(s))
 
     def _parse_memblt(self, s: BytesIO):
         """MEMBLT"""
@@ -117,55 +117,55 @@ class OrdersParser:
 
     def _parse_mem3blt(self, s: BytesIO):
         """MEM3BLT"""
-        self.notify.mem3Blt(Mem3Blt.parse(s, self.ctx))
+        self.notify.mem3Blt(self.ctx.mem3Blt.update(s))
 
     def _parse_multi_dstblt(self, s: BytesIO):
         """MULTI_DSTBLT"""
-        self.notify.multiDstBlt(MultiDstBlt.parse(s, self.ctx))
+        self.notify.multiDstBlt(self.ctx.multiDstBlt.update(s))
 
     def _parse_multi_patblt(self, s: BytesIO):
         """MULTI_PATBLT"""
-        self.notify.multiPatBlt(MultiPatBlt.parse(s, self.ctx))
+        self.notify.multiPatBlt(self.ctx.multiPatBlt.update(s))
 
     def _parse_multi_scrblt(self, s: BytesIO):
         """MULTI_SCRBLT"""
-        self.notify.multiScrBlt(MultiScrBlt.parse(s, self.ctx))
+        self.notify.multiScrBlt(self.ctx.multiScrBlt.update(s))
 
     def _parse_multi_opaque_rect(self, s: BytesIO):
         """MULTI_OPAQUE_RECT"""
-        self.notify.multiOpaqueRect(MultiOpaqueRect.parse(s, self.ctx))
+        self.notify.multiOpaqueRect(self.ctx.multiOpaqueRect.update(s))
 
     def _parse_fast_index(self, s: BytesIO):
         """FAST_INDEX"""
-        self.notify.fastIndex(FastIndex.parse(s, self.ctx))
+        self.notify.fastIndex(self.ctx.fastIndex.update(s))
 
     def _parse_polygon_sc(self, s: BytesIO):
         """POLYGON_SC"""
-        self.notify.polygonSc(PolygonSc.parse(s, self.ctx))
+        self.notify.polygonSc(self.ctx.polygonSc.update(s))
 
     def _parse_polygon_cb(self, s: BytesIO):
         """POLYGON_CB"""
-        self.notify.polygonCb(PolygonCb.parse(s, self.ctx))
+        self.notify.polygonCb(self.ctx.polygonCb.update(s))
 
     def _parse_polyLine(self, s: BytesIO):
         """POLYLINE"""
-        self.notify.polyLine(PolyLine.parse(s, self.ctx))
+        self.notify.polyLine(self.ctx.polyLine.update(s))
 
     def _parse_fast_glyph(self, s: BytesIO):
         """FAST_GLYPH"""
-        self.notify.fastGlyph(FastGlyph.parse(s, self.ctx))
+        self.notify.fastGlyph(self.ctx.fastGlyph.update(s))
 
     def _parse_ellipse_sc(self, s: BytesIO):
         """ELLIPSE_SC"""
-        self.notify.ellipseSc(EllipseSc.parse(s, self.ctx))
+        self.notify.ellipseSc(self.ctx.ellipseSc.update(s))
 
     def _parse_ellipse_cb(self, s: BytesIO):
         """ELLIPSE_CB"""
-        self.notify.ellipseCb(EllipseCb.parse(s, self.ctx))
+        self.notify.ellipseCb(self.ctx.ellipseCb.update(s))
 
     def _parse_glyph_index(self, s: BytesIO):
         """GLYPH_INDEX"""
-        self.notify.glyphIndex(GlyphIndex.parse(s, self.ctx))
+        self.notify.glyphIndex(self.ctx.glyphIndex.update(s))
 
     # Secondary drawing orders.
     # ----------------------------------------------------------------------

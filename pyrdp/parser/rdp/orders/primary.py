@@ -102,7 +102,29 @@ class PrimaryContext:
         # Whether the current draw order is bounded by a rectangle..
         self.bounded: bool = False
 
+        # Track state for each drawing order.
+        self.dstBlt = DstBlt(self)
+        self.patBlt = PatBlt(self)
+        self.scrBlt = ScrBlt(self)
+        self.drawNineGrid = DrawNineGrid(self)
+        self.multiDrawNineGrid = MultiDrawNineGrid(self)
+        self.lineTo = LineTo(self)
+        self.opaqueRect = OpaqueRect(self)
+        self.saveBitmap = SaveBitmap(self)
         self.memBlt = MemBlt(self)
+        self.mem3Blt = Mem3Blt(self)
+        self.multiDstBlt = MultiDstBlt(self)
+        self.multiPatBlt = MultiPatBlt(self)
+        self.multiScrBlt = MultiScrBlt(self)
+        self.multiOpaqueRect = MultiOpaqueRect(self)
+        self.fastIndex = FastIndex(self)
+        self.polygonSc = PolygonSc(self)
+        self.polygonCb = PolygonCb(self)
+        self.polyLine = PolyLine(self)
+        self.fastGlyph = FastGlyph(self)
+        self.ellipseSc = EllipseSc(self)
+        self.ellipseCb = EllipseCb(self)
+        self.glyphIndex = GlyphIndex(self)
 
     def update(self, s: BytesIO, flags: int):
         """
@@ -140,65 +162,73 @@ class PrimaryContext:
 
 
 class DstBlt:
-    @staticmethod
-    def parse(s: BytesIO, ctx: PrimaryContext) -> 'DstBlt':
-        self = DstBlt()
+    def __init__(self, ctx: PrimaryContext):
+        self.ctx = ctx
+
+    def update(self, s: BytesIO):
 
         return self
 
 
 class PatBlt:
-    @staticmethod
-    def parse(s: BytesIO, ctx: PrimaryContext) -> 'PatBlt':
-        self = PatBlt()
+    def __init__(self, ctx: PrimaryContext):
+        self.ctx = ctx
+
+    def update(self, s: BytesIO):
 
         return self
 
 
 class ScrBlt:
-    @staticmethod
-    def parse(s: BytesIO, ctx: PrimaryContext) -> 'ScrBlt':
-        self = ScrBlt()
+    def __init__(self, ctx: PrimaryContext):
+        self.ctx = ctx
+
+    def update(self, s: BytesIO):
 
         return self
 
 
 class DrawNineGrid:
-    @staticmethod
-    def parse(s: BytesIO, ctx: PrimaryContext) -> 'DrawNineGrid':
-        self = DrawNineGrid()
+    def __init__(self, ctx: PrimaryContext):
+        self.ctx = ctx
+
+    def update(self, s: BytesIO):
 
         return self
 
 
 class MultiDrawNineGrid:
-    @staticmethod
-    def parse(s: BytesIO, ctx: PrimaryContext) -> 'MultiDrawNineGrid':
-        self = MultiDrawNineGrid()
+    def __init__(self, ctx: PrimaryContext):
+        self.ctx = ctx
+
+    def update(self, s: BytesIO):
 
         return self
 
 
 class LineTo:
-    @staticmethod
-    def parse(s: BytesIO, ctx: PrimaryContext) -> 'LineTo':
-        self = LineTo()
+    def __init__(self, ctx: PrimaryContext):
+        self.ctx = ctx
+
+    def update(self, s: BytesIO):
 
         return self
 
 
 class OpaqueRect:
-    @staticmethod
-    def parse(s: BytesIO, ctx: PrimaryContext) -> 'OpaqueRect':
-        self = OpaqueRect()
+    def __init__(self, ctx: PrimaryContext):
+        self.ctx = ctx
+
+    def update(self, s: BytesIO):
 
         return self
 
 
 class SaveBitmap:
-    @staticmethod
-    def parse(s: BytesIO, ctx: PrimaryContext) -> 'SaveBitmap':
-        self = SaveBitmap()
+    def __init__(self, ctx: PrimaryContext):
+        self.ctx = ctx
+
+    def update(self, s: BytesIO):
 
         return self
 
@@ -241,104 +271,117 @@ class MemBlt:
 
 
 class Mem3Blt:
-    @staticmethod
-    def parse(s: BytesIO, ctx: PrimaryContext) -> 'Mem3Blt':
-        self = Mem3Blt()
+    def __init__(self, ctx: PrimaryContext):
+        self.ctx = ctx
+
+    def update(self, s: BytesIO):
 
         return self
 
 
 class MultiDstBlt:
-    @staticmethod
-    def parse(s: BytesIO, ctx: PrimaryContext) -> 'MultiDstBlt':
-        self = MultiDstBlt()
+    def __init__(self, ctx: PrimaryContext):
+        self.ctx = ctx
+
+    def update(self, s: BytesIO):
 
         return self
 
 
 class MultiPatBlt:
-    @staticmethod
-    def parse(s: BytesIO, ctx: PrimaryContext) -> 'MultiPatBlt':
-        self = MultiPatBlt()
+    def __init__(self, ctx: PrimaryContext):
+        self.ctx = ctx
+
+    def update(self, s: BytesIO):
 
         return self
 
 
 class MultiScrBlt:
-    @staticmethod
-    def parse(s: BytesIO, ctx: PrimaryContext) -> 'MultiScrBlt':
-        self = MultiScrBlt()
+    def __init__(self, ctx: PrimaryContext):
+        self.ctx = ctx
+
+    def update(self, s: BytesIO):
 
         return self
 
 
 class MultiOpaqueRect:
-    @staticmethod
-    def parse(s: BytesIO, ctx: PrimaryContext) -> 'MultiOpaqueRect':
-        self = MultiOpaqueRect()
+    def __init__(self, ctx: PrimaryContext):
+        self.ctx = ctx
+
+    def update(self, s: BytesIO):
 
         return self
 
 
 class FastIndex:
-    @staticmethod
-    def parse(s: BytesIO, ctx: PrimaryContext) -> 'FastIndex':
-        self = FastIndex()
+    def __init__(self, ctx: PrimaryContext):
+        self.ctx = ctx
+
+    def update(self, s: BytesIO):
 
         return self
 
 
 class PolygonSc:
-    @staticmethod
-    def parse(s: BytesIO, ctx: PrimaryContext) -> 'PolygonSc':
-        self = PolygonSc()
+    def __init__(self, ctx: PrimaryContext):
+        self.ctx = ctx
+
+    def update(self, s: BytesIO):
 
         return self
 
 
 class PolygonCb:
-    @staticmethod
-    def parse(s: BytesIO, ctx: PrimaryContext) -> 'PolygonCb':
-        self = PolygonCb()
+    def __init__(self, ctx: PrimaryContext):
+        self.ctx = ctx
+
+    def update(self, s: BytesIO):
 
         return self
 
 
 class PolyLine:
-    @staticmethod
-    def parse(s: BytesIO, ctx: PrimaryContext) -> 'PolyLine':
-        self = PolyLine()
+    def __init__(self, ctx: PrimaryContext):
+        self.ctx = ctx
+
+    def update(self, s: BytesIO):
 
         return self
 
 
 class FastGlyph:
-    @staticmethod
-    def parse(s: BytesIO, ctx: PrimaryContext) -> 'FastGlyph':
-        self = FastGlyph()
+    def __init__(self, ctx: PrimaryContext):
+        self.ctx = ctx
+
+    def update(self, s: BytesIO):
 
         return self
 
 
 class EllipseSc:
-    @staticmethod
-    def parse(s: BytesIO, ctx: PrimaryContext) -> 'EllipseSc':
-        self = EllipseSc()
+    def __init__(self, ctx: PrimaryContext):
+        self.ctx = ctx
+
+    def update(self, s: BytesIO):
 
         return self
 
 
 class EllipseCb:
-    @staticmethod
-    def parse(s: BytesIO, ctx: PrimaryContext) -> 'EllipseCb':
-        self = EllipseCb()
+    def __init__(self, ctx: PrimaryContext):
+        self.ctx = ctx
+
+    def update(self, s: BytesIO):
 
         return self
 
 
 class GlyphIndex:
-    @staticmethod
-    def parse(s: BytesIO, ctx: PrimaryContext) -> 'GlyphIndex':
-        self = GlyphIndex()
+    def __init__(self, ctx: PrimaryContext):
+        self.ctx = ctx
+
+    def update(self, s: BytesIO):
 
         return self
