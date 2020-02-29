@@ -14,12 +14,15 @@ from pyrdp.pdu.rdp.fastpath import FastPathOrdersEvent
 from pyrdp.enum.orders import DrawingOrderControlFlags as ControlFlags
 
 from .context import GdiContextObserver
+
 from .secondary import CacheBitmapV1, CacheColorTable, CacheGlyph, CacheBitmapV2, CacheBrush, CacheBitmapV3
 from .alternate import CreateOffscreenBitmap, SwitchSurface, CreateNineGridBitmap, \
     StreamBitmapFirst, StreamBitmapNext, GdiPlusFirst, GdiPlusNext, GdiPlusEnd, GdiPlusCacheFirst, \
     GdiPlusCacheNext, GdiPlusCacheEnd, FrameMarker
-from .primary import PrimaryContext as Context
-
+from .primary import PrimaryContext as Context, \
+    DstBlt, PatBlt, ScrBlt, DrawNineGrid, MultiDrawNineGrid, LineTo, OpaqueRect, SaveBitmap, MemBlt, \
+    Mem3Blt, MultiDstBlt, MultiPatBlt, MultiScrBlt, MultiOpaqueRect, FastIndex, PolygonSc, PolygonCb, \
+    PolyLine, FastGlyph, EllipseSc, EllipseCb, GlyphIndex
 
 LOG = logging.getLogger('pyrdp.fastpath.parser')
 
@@ -81,104 +84,106 @@ class OrdersParser:
 
     def _parse_dstblt(self, s: BytesIO):
         """DSTBLT"""
-        pass
+        self.notify(DstBlt.parse(s, self.ctx))
 
     def _parse_patblt(self, s: BytesIO):
         """PATBLT"""
-        pass
+        self.notify(PatBlt.parse(s, self.ctx))
 
     def _parse_scrblt(self, s: BytesIO):
         """SCRBLT"""
-        pass
+        self.notify(ScrBlt.parse(s, self.ctx))
 
     def _parse_draw_nine_grid(self, s: BytesIO):
         """DRAW_NINE_GRID"""
+        self.notify(DrawNineGrid.parse(s, self.ctx))
         pass
 
     def _parse_multi_draw_nine_grid(self, s: BytesIO):
         """MULTI_DRAW_NINE_GRID"""
+        self.notify(MultiDrawNineGrid.parse(s, self.ctx))
         pass
 
     def _parse_line_to(self, s: BytesIO):
         """LINE_TO"""
-        pass
+        self.notify(LineTo.parse(s, self.ctx))
 
     def _parse_opaque_rect(self, s: BytesIO):
         """OPAQUE_RECT"""
-        pass
+        self.notify(OpaqueRect.parse(s, self.ctx))
 
     def _parse_save_bitmap(self, s: BytesIO):
         """SAVE_BITMAP"""
-        pass
+        self.notify(SaveBitmap.parse(s, self.ctx))
 
     def _parse_memblt(self, s: BytesIO):
         """MEMBLT"""
-        pass
+        self.notify(MemBlt.parse(s, self.ctx))
 
     def _parse_mem3blt(self, s: BytesIO):
         """MEM3BLT"""
-        pass
+        self.notify(Mem3Blt.parse(s, self.ctx))
 
     def _parse_multi_dstblt(self, s: BytesIO):
         """MULTI_DSTBLT"""
-        pass
+        self.notify(MultiDstBlt.parse(s, self.ctx))
 
     def _parse_multi_patblt(self, s: BytesIO):
         """MULTI_PATBLT"""
-        pass
+        self.notify(MultiPatBlt.parse(s, self.ctx))
 
     def _parse_multi_scrblt(self, s: BytesIO):
         """MULTI_SCRBLT"""
-        pass
+        self.notify(MultiScrBlt.parse(s, self.ctx))
 
     def _parse_multi_opaque_rect(self, s: BytesIO):
         """MULTI_OPAQUE_RECT"""
-        pass
+        self.notify(MultiOpaqueRect.parse(s, self.ctx))
 
     def _parse_fast_index(self, s: BytesIO):
         """FAST_INDEX"""
-        pass
+        self.notify(FastIndex.parse(s, self.ctx))
 
     def _parse_polygon_sc(self, s: BytesIO):
         """POLYGON_SC"""
-        pass
+        self.notify(PolygonSc.parse(s, self.ctx))
 
     def _parse_polygon_cb(self, s: BytesIO):
         """POLYGON_CB"""
-        pass
+        self.notify(PolygonCb.parse(s, self.ctx))
 
-    def _parse_polyline(self, s: BytesIO):
+    def _parse_polyLine(self, s: BytesIO):
         """POLYLINE"""
-        pass
+        self.notify(PolyLine.parse(s, self.ctx))
 
     def _parse_fast_glyph(self, s: BytesIO):
         """FAST_GLYPH"""
-        pass
+        self.notify(FastGlyph.parse(s, self.ctx))
 
     def _parse_ellipse_sc(self, s: BytesIO):
         """ELLIPSE_SC"""
-        pass
+        self.notify(EllipseSc.parse(s, self.ctx))
 
     def _parse_ellipse_cb(self, s: BytesIO):
         """ELLIPSE_CB"""
-        pass
+        self.notify(EllipseCb.parse(s, self.ctx))
 
     def _parse_glyph_index(self, s: BytesIO):
         """GLYPH_INDEX"""
-        pass
+        self.notify(GlyphIndex.parse(s, self.ctx))
 
     # Secondary drawing orders.
     # ----------------------------------------------------------------------
     def _parse_secondary(self, s: BytesIO, flags: int):
-        orderLength = Uint16LE.unpack(s)
-        extraFlags = Uint16LE.unpack(s)  # TODO: Need to pass these through as well.
+        orderLength = Uint16LE.unpack(s)  # Unused?
+        extraFlags = Uint16LE.unpack(s)
         orderType = Uint8.unpack(s)
         # nxt = orderLength + 7
 
         assert orderType >= 0 and orderType < len(_sec)
 
         fp = _sec[orderType]
-        print(f'Order: {_repr(fp)}')  # DEBUG
+        print(f'Order: {_repr(fp)} Len={orderLength}')  # DEBUG
         fp(self, s, orderType, extraFlags)
 
     def _parse_cache_bitmap_v1(self, s: BytesIO, orderType: int, flags: int):
@@ -304,7 +309,7 @@ _pri = [
     OrdersParser._parse_fast_index,            # 0x13
     OrdersParser._parse_polygon_sc,            # 0x14
     OrdersParser._parse_polygon_cb,            # 0x15
-    OrdersParser._parse_polyline,              # 0x16
+    OrdersParser._parse_polyLine,              # 0x16
     None,                                      # 0x17
     OrdersParser._parse_fast_glyph,            # 0x18
     OrdersParser._parse_ellipse_sc,            # 0x19

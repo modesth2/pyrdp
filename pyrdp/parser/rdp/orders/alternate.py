@@ -104,7 +104,7 @@ class GdiPlusFirst:
 
         s.read(1)  # Padding
 
-        cbSize = Uint16LE.unpack(s)  # TODO: Store cbSize
+        cbSize = Uint16LE.unpack(s)
         self.totalSize = Uint32LE.unpack(s)
         self.totalEmfSize = Uint32LE.unpack(s)
         self.data = s.read(cbSize)
