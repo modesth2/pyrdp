@@ -164,8 +164,24 @@ class PrimaryContext:
 class DstBlt:
     def __init__(self, ctx: PrimaryContext):
         self.ctx = ctx
+        self.nLeftRect = 0
+        self.nTopRect = 0
+        self.nWidth = 0
+        self.nHeight = 0
+        self.rop = 0
 
     def update(self, s: BytesIO):
+
+        if self.ctx.field(1):
+            self.nLeftRect = read_coord(s, self.ctx.deltaCoords, self.nLeftRect)
+        if self.ctx.field(2):
+            self.nTopRect = read_coord(s, self.ctx.deltaCoords, self.nTopRect)
+        if self.ctx.field(3):
+            self.nWidth = read_coord(s, self.ctx.deltaCoords, self.nWidth)
+        if self.ctx.field(4):
+            self.nHeight = read_coord(s, self.ctx.deltaCoords, self.nHeight)
+        if self.ctx.field(5):
+            self.rop = Uint8.unpack(s)
 
         return self
 
