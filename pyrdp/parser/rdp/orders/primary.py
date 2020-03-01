@@ -359,7 +359,34 @@ class OpaqueRect:
     def __init__(self, ctx: PrimaryContext):
         self.ctx = ctx
 
+        self.nLeftRect = 0
+        self.nTopRect = 0
+        self.nWidth = 0
+        self.nHeight = 0
+        self.color = 0
+
     def update(self, s: BytesIO):
+
+        if self.ctx.field(1):
+            self.nLeftRect = read_coord(s, self.ctx.deltaCoords, self.nLeftRect)
+        if self.ctx.field(2):
+            self.nTopRect = read_coord(s, self.ctx.deltaCoords, self.nTopRect)
+        if self.ctx.field(3):
+            self.nWidth = read_coord(s, self.ctx.deltaCoords, self.nWidth)
+        if self.ctx.field(4):
+            self.nHeight = read_coord(s, self.ctx.deltaCoords, self.nHeight)
+
+        if self.ctx.field(5):
+            b = Uint8.unpack(s)
+            self.color = (self.color & 0x00FFFF00) | b
+
+        if self.ctx.field(6):
+            b = Uint8.unpack(s)
+            self.color = (self.color & 0x00FF00FF) | (b << 8)
+
+        if self.ctx.field(7):
+            b = Uint8.unpack(s)
+            self.color = (self.color & 0x0000FFFF) | (b << 16)
 
         return self
 
