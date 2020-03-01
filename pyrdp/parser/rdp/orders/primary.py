@@ -5,6 +5,8 @@ from io import BytesIO
 
 from pyrdp.enum.orders import DrawingOrderControlFlags as ControlFlags
 from pyrdp.core.packing import Uint8, Int8, Int16LE, Uint16LE
+from .common import read_color
+from .secondary import BMF_BPP, CACHED_BRUSH
 
 # This follows the PrimaryDrawOrderType enum
 ORDERTYPE_FIELDBYTES = [1, 2, 1, 0, 0, 0, 0, 1, 1, 2, 1, 1, 0, 2, 3, 1, 2, 2, 2, 2, 1, 2, 1, 0, 2, 1, 2, 3]
@@ -161,6 +163,32 @@ class PrimaryContext:
         return self.fieldFlags & (1 << (n - 1))
 
 
+class Brush:
+    def __init__(self, ctx: PrimaryContext):
+        self.ctx = ctx
+
+    def update(self, s: BytesIO):
+        # Using the upper byte of field flags.
+        if self.ctx.field(8):
+            self.x = Uint8.unpack(s)
+        if self.ctx.field(9):
+            self.y = Uint8.unpack(s)
+        if self.ctx.field(10):
+            self.style = Uint8.unpack(s)
+        if self.ctx.field(11):
+            self.hatch = Uint8.unpack(s)
+        if self.ctx.field(12):
+            self.data = (s.read(7) + bytes([self.hatch]))[::-1]
+
+        if self.style & CACHED_BRUSH:
+            self.index = self.hatch
+            self.bpp = BMF_BPP[self.style & 0x07]
+            if self.bpp == 0:
+                self.bpp = 1
+
+        return self
+
+
 class DstBlt:
     def __init__(self, ctx: PrimaryContext):
         self.ctx = ctx
@@ -189,8 +217,32 @@ class DstBlt:
 class PatBlt:
     def __init__(self, ctx: PrimaryContext):
         self.ctx = ctx
+        self.nLeftRect = 0
+        self.nTopRect = 0
+        self.nWidth = 0
+        self.nHeight = 0
+        self.bRop = 0
+        self.backColor = 0
+        self.foreColor = 0
+        self.brush = Brush(ctx)
 
     def update(self, s: BytesIO):
+        if self.ctx.field(1):
+            self.nLeftRect = read_coord(s, self.ctx.deltaCoords, self.nLeftRect)
+        if self.ctx.field(2):
+            self.nTopRect = read_coord(s, self.ctx.deltaCoords, self.nTopRect)
+        if self.ctx.field(3):
+            self.nWidth = read_coord(s, self.ctx.deltaCoords, self.nWidth)
+        if self.ctx.field(4):
+            self.nHeight = read_coord(s, self.ctx.deltaCoords, self.nHeight)
+        if self.ctx.field(5):
+            self.bRop = Uint8.unpack(s)
+        if self.ctx.field(6):
+            self.backColor = read_color(s)
+        if self.ctx.field(7):
+            self.foreColor = read_color(s)
+
+        self.brush.update(s)
 
         return self
 
