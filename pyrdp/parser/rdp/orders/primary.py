@@ -624,8 +624,37 @@ class EllipseSc:
 class EllipseCb:
     def __init__(self, ctx: PrimaryContext):
         self.ctx = ctx
+        self.brush = Brush()
+
+        self.leftRect = 0
+        self.topRect = 0
+        self.rightRect = 0
+        self.bottomRect = 0
+        self.bRop2 = 0
+        self.fillMode = 0
+        self.backColor = 0
+        self.foreColor = 0
 
     def update(self, s: BytesIO):
+
+        if self.ctx.field(1):
+            self.leftRect = read_coord(s, self.ctx.deltaCoords, self.leftRect)
+        if self.ctx.field(2):
+            self.topRect = read_coord(s, self.ctx.deltaCoords, self.topRect)
+        if self.ctx.field(3):
+            self.rightRect = read_coord(s, self.ctx.deltaCoords, self.rightRect)
+        if self.ctx.field(4):
+            self.bottomRect = read_coord(s, self.ctx.deltaCoords, self.bottomRect)
+        if self.ctx.field(5):
+            self.bRop2 = Uint8.unpack(s)
+        if self.ctx.field(6):
+            self.fillMode = Uint8.unpack(s)
+        if self.ctx.field(7):
+            self.backColor = read_color(s)
+        if self.ctx.field(8):
+            self.foreColor = read_color(s)
+
+        self.brush.update(s, self.ctx.fieldFlags >> 8)
 
         return self
 
