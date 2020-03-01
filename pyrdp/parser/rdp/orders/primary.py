@@ -164,20 +164,16 @@ class PrimaryContext:
 
 
 class Brush:
-    def __init__(self, ctx: PrimaryContext):
-        self.ctx = ctx
-
-    def update(self, s: BytesIO):
-        # Using the upper byte of field flags.
-        if self.ctx.field(8):
+    def update(self, s: BytesIO, flags: int):
+        if flags & 0b00001:
             self.x = Uint8.unpack(s)
-        if self.ctx.field(9):
+        if flags & 0b00010:
             self.y = Uint8.unpack(s)
-        if self.ctx.field(10):
+        if flags & 0b00100:
             self.style = Uint8.unpack(s)
-        if self.ctx.field(11):
+        if flags & 0b01000:
             self.hatch = Uint8.unpack(s)
-        if self.ctx.field(12):
+        if flags & 0b10000:
             self.data = (s.read(7) + bytes([self.hatch]))[::-1]
 
         if self.style & CACHED_BRUSH:
@@ -224,7 +220,7 @@ class PatBlt:
         self.bRop = 0
         self.backColor = 0
         self.foreColor = 0
-        self.brush = Brush(ctx)
+        self.brush = Brush()
 
     def update(self, s: BytesIO):
         if self.ctx.field(1):
@@ -242,7 +238,7 @@ class PatBlt:
         if self.ctx.field(7):
             self.foreColor = read_color(s)
 
-        self.brush.update(s)
+        self.brush.update(s, self.ctx.fieldFlags >> 7)
 
         return self
 
@@ -460,8 +456,54 @@ class MemBlt:
 class Mem3Blt:
     def __init__(self, ctx: PrimaryContext):
         self.ctx = ctx
+        self.brush = Brush()
+
+        self.cacheId = 0
+        self.nLeftRect = 0
+        self.nTopRect = 0
+        self.nWidth = 0
+        self.nHeight = 0
+        self.bRop = 0
+        self.nXSrc = 0
+        self.nYSrc = 0
+        self.backColor = 0
+        self.foreColor = 0
+        self.cacheIndex = 0
+        self.colorIndex = 0
+        self.cacheId = 0
+        self.bitmap = None
 
     def update(self, s: BytesIO):
+
+        if self.ctx.field(1):
+            self.cacheId = Uint16LE.unpack(s)
+        if self.ctx.field(2):
+            self.nLeftRect = read_coord(s, self.ctx.deltaCoords, self.nLeftRect)
+        if self.ctx.field(3):
+            self.nTopRect = read_coord(s, self.ctx.deltaCoords, self.nTopRect)
+        if self.ctx.field(4):
+            self.nWidth = read_coord(s, self.ctx.deltaCoords, self.nWidth)
+        if self.ctx.field(5):
+            self.nHeight = read_coord(s, self.ctx.deltaCoords, self.nHeight)
+        if self.ctx.field(6):
+            self.bRop = Uint8.unpack(s)
+        if self.ctx.field(7):
+            self.nXSrc = read_coord(s, self.ctx.deltaCoords, self.nXSrc)
+        if self.ctx.field(8):
+            self.nYSrc = read_coord(s, self.ctx.deltaCoords, self.nYSrc)
+        if self.ctx.field(9):
+            self.backColor = read_color(s)
+        if self.ctx.field(10):
+            self.foreColor = read_color(s)
+
+        self.brush.update(s, self.ctx.fieldFlags >> 10)
+
+        if self.ctx.field(16):
+            self.cacheIndex = Uint16LE.unpack(s)
+
+        self.colorIndex = self.cacheId >> 8
+        self.cacheId = self.cacheId & 0xFF
+        self.bitmap = None
 
         return self
 
