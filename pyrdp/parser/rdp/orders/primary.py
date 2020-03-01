@@ -4,7 +4,7 @@ Constants and state for Primary Drawing Orders.
 from io import BytesIO
 
 from pyrdp.enum.orders import DrawingOrderControlFlags as ControlFlags
-from pyrdp.core.packing import Uint8, Int8, Int16LE, Uint16LE
+from pyrdp.core.packing import Uint8, Int8, Int16LE, Uint16LE, Uint32LE
 from .common import read_color
 from .secondary import BMF_BPP, CACHED_BRUSH
 
@@ -395,7 +395,27 @@ class SaveBitmap:
     def __init__(self, ctx: PrimaryContext):
         self.ctx = ctx
 
+        self.savedBitmapPosition = 0
+        self.nLeftRect = 0
+        self.nTopRect = 0
+        self.nRightRect = 0
+        self.nBottomRect = 0
+        self.operation = 0
+
     def update(self, s: BytesIO):
+
+        if self.ctx.field(1):
+            self.savedBitmapPosition = Uint32LE.unpack(s)
+        if self.ctx.field(2):
+            self.nLeftRect = read_coord(s, self.ctx.deltaCoords, self.nLeftRect)
+        if self.ctx.field(3):
+            self.nTopRect = read_coord(s, self.ctx.deltaCoords, self.nTopRect)
+        if self.ctx.field(4):
+            self.nRightRect = read_coord(s, self.ctx.deltaCoords, self.nRightRect)
+        if self.ctx.field(5):
+            self.nBottomRect = read_coord(s, self.ctx.deltaCoords, self.nBottomRect)
+        if self.ctx.field(6):
+            self.operation = Uint8.unpack(s)
 
         return self
 
