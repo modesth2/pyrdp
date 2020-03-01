@@ -663,6 +663,68 @@ class GlyphIndex:
     def __init__(self, ctx: PrimaryContext):
         self.ctx = ctx
 
+        self.cacheId = 0
+        self.flAccel = 0
+        self.ulCharInc = 0
+        self.fOpRedundant = 0
+        self.backColor = 0
+        self.foreColor = 0
+        self.bkLeft = 0
+        self.bkTop = 0
+        self.bkRight = 0
+        self.bkBottom = 0
+        self.opLeft = 0
+        self.opTop = 0
+        self.opRight = 0
+        self.opBottom = 0
+
+        self.brush = Brush()
+
+        self.x = 0
+        self.y = 0
+
+        self.data = []
+
     def update(self, s: BytesIO):
+
+        if self.ctx.field(1):
+            self.cacheId = Uint8.unpack(s)
+        if self.ctx.field(2):
+            self.flAccel = Uint8.unpack(s)
+        if self.ctx.field(3):
+            self.ulCharInc = Uint8.unpack(s)
+        if self.ctx.field(4):
+            self.fOpRedundant = Uint8.unpack(s)
+        if self.ctx.field(5):
+            self.backColor = read_color(s)
+        if self.ctx.field(6):
+            self.foreColor = read_color(s)
+        if self.ctx.field(7):
+            self.bkLeft = Uint16LE.unpack(s)
+        if self.ctx.field(8):
+            self.bkTop = Uint16LE.unpack(s)
+        if self.ctx.field(9):
+            self.bkRight = Uint16LE.unpack(s)
+        if self.ctx.field(10):
+            self.bkBottom = Uint16LE.unpack(s)
+        if self.ctx.field(11):
+            self.opLeft = Uint16LE.unpack(s)
+        if self.ctx.field(12):
+            self.opTop = Uint16LE.unpack(s)
+        if self.ctx.field(13):
+            self.opRight = Uint16LE.unpack(s)
+        if self.ctx.field(14):
+            self.opBottom = Uint16LE.unpack(s)
+
+        self.brush.update(s, self.ctx.fieldFlags >> 14)
+
+        if self.ctx.field(20):
+            self.x = Uint16LE.unpack(s)
+        if self.ctx.field(21):
+            self.y = Uint16LE.unpack(s)
+
+        if self.ctx.field(22):
+            cbData = Uint8.unpack(s)
+            self.data = s.read(cbData)
 
         return self
