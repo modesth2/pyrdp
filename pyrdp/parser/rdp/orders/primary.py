@@ -283,7 +283,24 @@ class DrawNineGrid:
     def __init__(self, ctx: PrimaryContext):
         self.ctx = ctx
 
+        self.srcLeft = 0
+        self.srcTop = 0
+        self.srcRight = 0
+        self.srcBottom = 0
+        self.bitmapId = 0
+
     def update(self, s: BytesIO):
+
+        if self.ctx.field(1):
+            self.srcLeft = read_coord(s, self.ctx.deltaCoords, self.srcLeft)
+        if self.ctx.field(2):
+            self.srcTop = read_coord(s, self.ctx.deltaCoords, self.srcTop)
+        if self.ctx.field(3):
+            self.srcRight = read_coord(s, self.ctx.deltaCoords, self.srcRight)
+        if self.ctx.field(4):
+            self.srcBottom = read_coord(s, self.ctx.deltaCoords, self.srcBottom)
+        if self.ctx.field(5):
+            self.bitmapId = Uint16LE.unpack(s)
 
         return self
 
