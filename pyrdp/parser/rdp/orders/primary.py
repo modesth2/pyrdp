@@ -318,7 +318,39 @@ class LineTo:
     def __init__(self, ctx: PrimaryContext):
         self.ctx = ctx
 
+        self.backMode = 0
+        self.nXStart = 0
+        self.nYStart = 0
+        self.nXEnd = 0
+        self.nYEnd = 0
+        self.backColor = 0
+        self.bRop2 = 0
+        self.penStyle = 0
+        self.penWidth = 0
+        self.penColor = 0
+
     def update(self, s: BytesIO):
+
+        if self.ctx.field(1):
+            self.backMode = Uint16LE.unpack(s)
+        if self.ctx.field(2):
+            self.nXStart = read_coord(s, self.ctx.deltaCoords, self.nXStart)
+        if self.ctx.field(3):
+            self.nYStart = read_coord(s, self.ctx.deltaCoords, self.nYStart)
+        if self.ctx.field(4):
+            self.nXEnd = read_coord(s, self.ctx.deltaCoords, self.nXEnd)
+        if self.ctx.field(5):
+            self.nYEnd = read_coord(s, self.ctx.deltaCoords, self.nYEnd)
+        if self.ctx.field(6):
+            self.backColor = read_color(s)
+        if self.ctx.field(7):
+            self.bRop2 = Uint8.unpack(s)
+        if self.ctx.field(8):
+            self.penStyle = Uint8.unpack(s)
+        if self.ctx.field(9):
+            self.penWidth = Uint8.unpack(s)
+        if self.ctx.field(10):
+            self.penColor = read_color(s)
 
         return self
 
