@@ -5,7 +5,7 @@ from io import BytesIO
 
 from pyrdp.enum.orders import DrawingOrderControlFlags as ControlFlags
 from pyrdp.core.packing import Uint8, Int8, Int16LE, Uint16LE, Uint32LE
-from .common import read_color
+from .common import read_color, GlyphV2
 from .secondary import BMF_BPP, CACHED_BRUSH
 
 # This follows the PrimaryDrawOrderType enum
@@ -56,15 +56,53 @@ def read_coord(s: BytesIO, delta: bool, prev: int):
         return Int16LE.unpack(s)
 
 
+def read_delta(s: BytesIO) -> int:
+    msb = Uint8.unpack(s)
+    val = msb | ~0x3F if msb & 0x40 else msb & 0x3F
+    if msb & 0x80:
+        val = (val << 8) | Uint8.unpack(s)
+    return val
+
+
 def read_delta_points(s: BytesIO, n: int, x0: int, y0: int) -> [(int, int)]:
     """
     Read an array of delta encoded points.
 
+    :param s: The data stream to parse the delta points from.
+    :param n: The number of points that are encoded in the stream.
+    :param x0: The initial value of x.
+    :param y0: The initial value of y.
+
     A points is represented as an (x,y)-tuple.
+
+    This function converts the deltas into absolute coordinates.
+
     https://docs.microsoft.com/en-us/openspecs/windows_protocols/ms-rdpegdi/6c7b2a52-103c-4a7d-a2a9-997416d4a475
-    TODO: Implement
     """
-    return []
+
+    zeroBitsLen = ((n + 3) // 4)
+    zeroBits = s.read(zeroBitsLen)
+
+    dx = x0
+    dy = y0
+
+    points = []
+    for i in range(n):
+
+        # Next zeroBits byte.
+        if i % 4 == 0:
+            flags = zeroBits[i // 4]
+
+        x = (read_delta(s) + dx) if not flags & 0x80 else dx
+        y = (read_delta(s) + dy) if not flags & 0x40 else dy
+        flags <<= 2
+        points.append((x, y))
+
+        # Update (dx, dy) to match the new point.
+        dx = x
+        dy = y
+
+    return points
 
 
 def read_delta_rectangles(s: BytesIO, n: int) -> [(int, int, int, int)]:
@@ -81,6 +119,7 @@ def read_delta_rectangles(s: BytesIO, n: int) -> [(int, int, int, int)]:
 
 class Bounds:
     """A bounding rectangle."""
+
     def __init__(self):
         self.left = 0
         self.top = 0
@@ -946,7 +985,7 @@ class FastGlyph:
 
             # Read glyph data.
             if cbData > 1:
-                self.glyph = GlyphV2.parse(...)
+                self.glyph = GlyphV2.parse(s)
                 self.cacheIndex = self.glyph.cacheIndex
                 self.read(2)  # Padding / Unicode representation
             else:
