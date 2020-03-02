@@ -70,7 +70,7 @@ class Glyph:
         self.cy = Uint16LE.unpack(s)
 
         # Calculate aj length (DWORD-aligned bitfield)
-        cb = ((self.cx + 7) / 8) * self.cy
+        cb = ((self.cx + 7) // 8) * self.cy
         cb += 4 - (cb % 4) if ((cb % 4) > 0) else 0
         self.aj = s.read(cb)
 
@@ -94,7 +94,7 @@ class GlyphV2:
 
         # Calculate aj length (DWORD-aligned bitfield)
 
-        cb = ((self.cx + 7) / 8) * self.cy
+        cb = ((self.cx + 7) // 8) * self.cy
         cb += 4 - (cb % 4) if ((cb % 4) > 0) else 0
         self.aj = s.read(cb)
 
