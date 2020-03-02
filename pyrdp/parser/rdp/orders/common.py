@@ -82,12 +82,11 @@ class GlyphV2:
     TS_CACHE_GLYPH_DATA_REV2 (2.2.2.2.1.2.6.1)
     """
     @staticmethod
-    def parse(s: BytesIO) -> 'GlyphV2':
-        self = GlyphV2()
+    def parse(s: BytesIO) -> Glyph:
+        self = Glyph()
 
         self.cacheIndex = Uint8.unpack(s)
 
-        # TODO:
         self.x = read_encoded_int16(s)
         self.y = read_encoded_int16(s)
         self.cx = read_encoded_uint16(s)
