@@ -31,6 +31,37 @@ CG_GLYPH_UNICODE_PRESENT = 0x100
 CACHED_BRUSH = 0x80
 
 
+def decompress_brush(s: BytesIO, bpp: int) -> bytes:
+    """
+    Decompress brush data.
+
+    The brush data is encoded in reverse order
+    """
+    bitmap = s.read(16)
+
+    paletteBpp = (bpp + 1) // 8
+    palette = s.read(paletteBpp*4)
+    brush = bytes(paletteBpp * 64)  # 8x8 = 64 pixels
+
+    i = 0
+    for y in range(8):
+        y = 8 - y
+        for x in range(8):
+            if x % 4 == 0:
+                pixel = bitmap[i]
+                i += 1
+
+            # Encoded as 2-bit per pixel: 00112233.
+            color = (pixel >> (3 - (x % 4)) * 2) & 0x3
+
+            # Copy `paletteBpp` bytes into the brush.
+            src = color * paletteBpp
+            dst = (y * 8 + x) * paletteBpp
+            brush[dst:dst+paletteBpp] = palette[src:src+paletteBpp]
+
+    return brush
+
+
 class CacheBitmapV1:
     @staticmethod
     def parse(s: BytesIO, orderType: int, flags: int) -> 'CacheBitmapV1':
@@ -159,7 +190,7 @@ class CacheBrush:
             compressed = True
 
         if compressed:
-            print('BRUSH DECOMPRESSION IS NOT IMPLEMENTED')  # DEBUG
+            decompress_brush(s, self.bpp)
             self.data = []
         else:
             self.data = bytes(256)  # Preallocate
