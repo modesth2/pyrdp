@@ -98,7 +98,7 @@ def read_delta_points(s: BytesIO, n: int, x0: int, y0: int) -> [(int, int)]:
         flags <<= 2
         points.append((x, y))
 
-        # Update (dx, dy) to match the new point.
+        # Update previous point coords.
         dx = x
         dy = y
 
@@ -109,12 +109,39 @@ def read_delta_rectangles(s: BytesIO, n: int) -> [(int, int, int, int)]:
     """
     Read an array of delta encoded rectangles.
 
-    A rectangles is represented as a (left, top, right, bottom)-tuple.
-    https://docs.microsoft.com/en-us/openspecs/windows_protocols/ms-rdpegdi/b89f2058-b180-4da0-9bd1-aa694c87768c
+    :param s: The data stream to parse the rectangles from.
+    :param n: The number of rectangles encoded in the stream.
 
-    TODO: Implement
+    A rectangles is represented as a (left, top, width, height)-tuple.
+
+    This function converts the deltas into absolute coordinates.
+
+    https://docs.microsoft.com/en-us/openspecs/windows_protocols/ms-rdpegdi/b89f2058-b180-4da0-9bd1-aa694c87768c
     """
-    return []
+
+    zeroBitsSize = (n + 1) // 2
+    zeroBits = s.read(zeroBitsSize)
+
+    rectangles = []
+    dl = dt = dw = dh = 0
+
+    for i in range(n):
+        if i % 2 == 0:
+            flags = zeroBits[i // 2]
+
+        left = read_delta(s) + dl if not flags & 0x80 else dl
+        top = read_delta(s) + dt if not flags & 0x40 else dt
+        width = read_delta(s) + dw if not flags & 0x20 else dw
+        height = read_delta(s) + dh if not flags & 0x10 else dh
+        flags <<= 4
+        rectangles.append((left, top, width, height))
+
+        # Update previous rectangle coords.
+        dl = left
+        dt = top
+        dw = width
+        dh = height
+    return rectangles
 
 
 class Bounds:
@@ -991,7 +1018,7 @@ class FastGlyph:
             else:
                 # Only a cache index.
                 assert cbData == 1
-                self.glyph = None # Glyph must be retrieved from cacheIndex
+                self.glyph = None  # Glyph must be retrieved from cacheIndex
                 self.cacheIndex = Uint8.unpack(s)
 
         return self
