@@ -910,6 +910,45 @@ class FastGlyph:
         self.ctx = ctx
 
     def update(self, s: BytesIO):
+        if self.ctx.field(1):
+            self.cacheId = Uint8.unpack(s)
+        if self.ctx.field(2):
+            self.ulCharInc = Uint8.unpack(s)
+            self.flAccel = Uint8.unpack(s)
+        if self.ctx.field(3):
+            self.backColor = read_color(s)
+        if self.ctx.field(4):
+            self.foreColor = read_color(s)
+        if self.ctx.field(5):
+            self.bkLeft = read_coord(s, self.ctx.deltaCoords, self.bkLeft)
+        if self.ctx.field(6):
+            self.bkTop = read_coord(s, self.ctx.deltaCoords, self.bkTop)
+        if self.ctx.field(7):
+            self.bkRight = read_coord(s, self.ctx.deltaCoords, self.bkRight)
+        if self.ctx.field(8):
+            self.bkBottom = read_coord(s, self.ctx.deltaCoords, self.bkBottom)
+        if self.ctx.field(9):
+            self.opLeft = read_coord(s, self.ctx.deltaCoords, self.opLeft)
+        if self.ctx.field(10):
+            self.opTop = read_coord(s, self.ctx.deltaCoords, self.opTop)
+        if self.ctx.field(11):
+            self.opRight = read_coord(s, self.ctx.deltaCoords, self.opRight)
+        if self.ctx.field(12):
+            self.opBottom = read_coord(s, self.ctx.deltaCoords, self.opBottom)
+        if self.ctx.field(13):
+            self.x = read_coord(s, self.ctx.deltaCoords, self.x)
+        if self.ctx.field(14):
+            self.y = read_coord(s, self.ctx.deltaCoords, self.y)
+
+        if self.ctx.field(15):
+            cbData = Uint8.unpack(s)
+            self.data = s.read(cbData)
+
+            if cbData > 1:
+                # TODO: Read glyph data
+                # https://docs.microsoft.com/en-us/openspecs/windows_protocols/ms-rdpegdi/839e963c-e24a-42ad-b4bd-eb108340629c
+                # VariableByte field
+                pass
 
         return self
 
