@@ -186,6 +186,7 @@ class PrimaryContext:
         return self.orderType
 
     def field(self, n: int):
+        """Check whether field `n` is present in the message."""
         return self.fieldFlags & (1 << (n - 1))
 
 
@@ -942,13 +943,17 @@ class FastGlyph:
 
         if self.ctx.field(15):
             cbData = Uint8.unpack(s)
-            self.data = s.read(cbData)
 
+            # Read glyph data.
             if cbData > 1:
-                # TODO: Read glyph data
-                # https://docs.microsoft.com/en-us/openspecs/windows_protocols/ms-rdpegdi/839e963c-e24a-42ad-b4bd-eb108340629c
-                # VariableByte field
-                pass
+                self.glyph = GlyphV2.parse(...)
+                self.cacheIndex = self.glyph.cacheIndex
+                self.read(2)  # Padding / Unicode representation
+            else:
+                # Only a cache index.
+                assert cbData == 1
+                self.glyph = None # Glyph must be retrieved from cacheIndex
+                self.cacheIndex = Uint8.unpack(s)
 
         return self
 

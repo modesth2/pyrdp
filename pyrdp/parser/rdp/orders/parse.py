@@ -5,6 +5,8 @@
 #
 """
 Parse Drawing Orders.
+
+TODO: Log unsupported orders.
 """
 import logging
 from io import BytesIO
@@ -19,12 +21,9 @@ from .secondary import CacheBitmapV1, CacheColorTable, CacheGlyph, CacheBitmapV2
 from .alternate import CreateOffscreenBitmap, SwitchSurface, CreateNineGridBitmap, \
     StreamBitmapFirst, StreamBitmapNext, GdiPlusFirst, GdiPlusNext, GdiPlusEnd, GdiPlusCacheFirst, \
     GdiPlusCacheNext, GdiPlusCacheEnd, FrameMarker
-from .primary import PrimaryContext as Context, \
-    DstBlt, PatBlt, ScrBlt, DrawNineGrid, MultiDrawNineGrid, LineTo, OpaqueRect, SaveBitmap, MemBlt, \
-    Mem3Blt, MultiDstBlt, MultiPatBlt, MultiScrBlt, MultiOpaqueRect, FastIndex, PolygonSc, PolygonCb, \
-    PolyLine, FastGlyph, EllipseSc, EllipseCb, GlyphIndex
+from .primary import PrimaryContext as Context
 
-LOG = logging.getLogger('pyrdp.fastpath.parser')
+LOG = logging.getLogger('pyrdp.fastpath.rdp.orders')
 
 
 def _repr(n):
@@ -77,6 +76,7 @@ class OrdersParser:
         orderType = self.ctx.update(s, flags)
 
         fp = _pri[orderType]
+        LOG.debug('[PRIMARY] %s', _repr(fp))
         fp(self, s)
 
     def _parse_dstblt(self, s: BytesIO):
@@ -178,6 +178,7 @@ class OrdersParser:
         assert orderType >= 0 and orderType < len(_sec)
 
         fp = _sec[orderType]
+        LOG.debug('[SECONDARY] %s (len=%d)', _repr(fp), orderLength)
         fp(self, s, orderType, extraFlags)
 
     def _parse_cache_bitmap_v1(self, s: BytesIO, orderType: int, flags: int):
@@ -214,10 +215,10 @@ class OrdersParser:
     def _parse_altsec(self, s: BytesIO, flags: int):
         orderType = flags >> 2
 
-        # TODO: Log unsupported orders.
         assert orderType >= 0 and orderType < len(_alt)
 
         fp = _alt[orderType]
+        LOG.debug('[ALTSEC] %s', _repr(fp))
         fp(self, s)
 
     def _parse_create_offscreen_bitmap(self, s: BytesIO):

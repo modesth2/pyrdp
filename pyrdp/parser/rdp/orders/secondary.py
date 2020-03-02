@@ -6,7 +6,7 @@ from io import BytesIO
 from pyrdp.core.packing import Uint8, Uint16LE, Uint32LE
 from pyrdp.enum.orders import Secondary
 from pyrdp.enum.rdp import GeneralExtraFlag
-from .common import read_color, read_utf16_str, read_encoded_uint16, read_encoded_uint32
+from .common import read_color, read_utf16_str, read_encoded_uint16, read_encoded_uint32, Glyph
 
 CBR2_BPP = [0, 0, 0, 8, 16, 24, 32]
 BPP_CBR2 = [0, 0, 0, 0, 0, 0, 0, 0, 3, 0, 0, 0, 0, 0, 0, 0, 4, 0, 0, 0,
@@ -79,16 +79,7 @@ class CacheGlyph:
         self.cacheId = Uint8.unpack(s)
         cGlyphs = Uint8.unpack(s)
 
-        # TODO: Store individual glyphs
-        for _ in range(cGlyphs):
-            cacheIndex = Uint16LE.unpack(s)
-            cx = Uint16LE.unpack(s)
-            cy = Uint16LE.unpack(s)
-
-            cb = ((cx + 7) / 8) * cy
-            cb += 4 - (cb % 4) if ((cb % 4) > 0) else 0
-
-            aj = s.read(cb)
+        self.glyphs = [Glyph.parse(s) for _ in range(cGlyphs)]
 
         if flags & CG_GLYPH_UNICODE_PRESENT and cGlyphs > 0:
             self.unicode = read_utf16_str(s, cGlyphs)
