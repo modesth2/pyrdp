@@ -20,6 +20,9 @@ BOUND_DELTA_TOP = 0x20
 BOUND_DELTA_RIGHT = 0x40
 BOUND_DELTA_BOTTOM = 0x80
 
+BACKMODE_TRANSPARENT = 0x01
+BACKMODE_OPAQUE = 0x02
+
 
 def read_field_flags(s: BytesIO, flags: int, orderType: int) -> int:
     """Reads encoded field flags."""
@@ -51,6 +54,29 @@ def read_coord(s: BytesIO, delta: bool, prev: int):
         return prev + Int8.unpack(s)
     else:
         return Int16LE.unpack(s)
+
+
+def read_delta_points(s: BytesIO, n: int, x0: int, y0: int) -> [(int, int)]:
+    """
+    Read an array of delta encoded points.
+
+    A points is represented as an (x,y)-tuple.
+    https://docs.microsoft.com/en-us/openspecs/windows_protocols/ms-rdpegdi/6c7b2a52-103c-4a7d-a2a9-997416d4a475
+    TODO: Implement
+    """
+    return []
+
+
+def read_delta_rectangles(s: BytesIO, n: int) -> [(int, int, int, int)]:
+    """
+    Read an array of delta encoded rectangles.
+
+    A rectangles is represented as a (left, top, right, bottom)-tuple.
+    https://docs.microsoft.com/en-us/openspecs/windows_protocols/ms-rdpegdi/b89f2058-b180-4da0-9bd1-aa694c87768c
+
+    TODO: Implement
+    """
+    return []
 
 
 class Bounds:
@@ -164,6 +190,14 @@ class PrimaryContext:
 
 
 class Brush:
+    def __init__(self):
+        self.x = self.y = 0
+        self.style = 0
+        self.hatch = 0
+        self.data = None
+        self.index = 0
+        self.bpp = 0
+
     def update(self, s: BytesIO, flags: int):
         if flags & 0b00001:
             self.x = Uint8.unpack(s)
@@ -195,7 +229,6 @@ class DstBlt:
         self.rop = 0
 
     def update(self, s: BytesIO):
-
         if self.ctx.field(1):
             self.nLeftRect = read_coord(s, self.ctx.deltaCoords, self.nLeftRect)
         if self.ctx.field(2):
@@ -256,7 +289,6 @@ class ScrBlt:
         self.nYSrc = 0
 
     def update(self, s: BytesIO):
-
         if self.ctx.field(1):
             self.nLeftRect = read_coord(s, self.ctx.deltaCoords, self.nLeftRect)
         if self.ctx.field(2):
@@ -286,7 +318,6 @@ class DrawNineGrid:
         self.bitmapId = 0
 
     def update(self, s: BytesIO):
-
         if self.ctx.field(1):
             self.srcLeft = read_coord(s, self.ctx.deltaCoords, self.srcLeft)
         if self.ctx.field(2):
@@ -305,7 +336,32 @@ class MultiDrawNineGrid:
     def __init__(self, ctx: PrimaryContext):
         self.ctx = ctx
 
+        self.srcLeft = 0
+        self.srcTop = 0
+        self.srcRight = 0
+        self.srcBottom = 0
+        self.bitmapId = 0
+        self.nDeltaEntries = 0
+        self.cbData = 0
+        self.rectangles = []
+
     def update(self, s: BytesIO):
+        if self.ctx.field(1):
+            self.srcLeft = read_coord(s, self.ctx.deltaCoords, self.srcLeft)
+        if self.ctx.field(2):
+            self.srcTop = read_coord(s, self.ctx.deltaCoords, self.srcTop)
+        if self.ctx.field(3):
+            self.srcRight = read_coord(s, self.ctx.deltaCoords, self.srcRight)
+        if self.ctx.field(4):
+            self.srcBottom = read_coord(s, self.ctx.deltaCoords, self.srcBottom)
+        if self.ctx.field(5):
+            self.bitmapId = Uint16LE.unpack(s)
+        if self.ctx.field(6):
+            self.nDeltaEntries = Uint8.unpack(s)
+
+        if self.ctx.field(7):
+            self.cbData = Uint16LE.unpack(s)
+            self.rectangles = read_delta_rectangles(s, self.nDeltaEntries)
 
         return self
 
@@ -326,7 +382,6 @@ class LineTo:
         self.penColor = 0
 
     def update(self, s: BytesIO):
-
         if self.ctx.field(1):
             self.backMode = Uint16LE.unpack(s)
         if self.ctx.field(2):
@@ -362,7 +417,6 @@ class OpaqueRect:
         self.color = 0
 
     def update(self, s: BytesIO):
-
         if self.ctx.field(1):
             self.nLeftRect = read_coord(s, self.ctx.deltaCoords, self.nLeftRect)
         if self.ctx.field(2):
@@ -399,7 +453,6 @@ class SaveBitmap:
         self.operation = 0
 
     def update(self, s: BytesIO):
-
         if self.ctx.field(1):
             self.savedBitmapPosition = Uint32LE.unpack(s)
         if self.ctx.field(2):
@@ -428,8 +481,8 @@ class MemBlt:
     def update(self, s: BytesIO) -> 'MemBlt':
         ctx = self.ctx
 
-        # How to make this nice?
-        if ctx.field(1): self.cacheId = Uint16LE.unpack(s)  # NOQA
+        if ctx.field(1):
+            self.cacheId = Uint16LE.unpack(s)
         if ctx.field(2):
             self.leftRect = read_coord(s, ctx.deltaCoords, self.leftRect)
         if ctx.field(3):
@@ -474,7 +527,6 @@ class Mem3Blt:
         self.bitmap = None
 
     def update(self, s: BytesIO):
-
         if self.ctx.field(1):
             self.cacheId = Uint16LE.unpack(s)
         if self.ctx.field(2):
@@ -512,7 +564,32 @@ class MultiDstBlt:
     def __init__(self, ctx: PrimaryContext):
         self.ctx = ctx
 
+        self.nLeftRect = 0
+        self.nTopRect = 0
+        self.nWidth = 0
+        self.nHeight = 0
+        self.bRop = 0
+        self.numRectangles = 0
+        self.cbData = 0
+        self.rectangles = []
+
     def update(self, s: BytesIO):
+        if self.ctx.field(1):
+            self.nLeftRect = read_coord(s, self.ctx.deltaCoords, self.nLeftRect)
+        if self.ctx.field(2):
+            self.nTopRect = read_coord(s, self.ctx.deltaCoords, self.nTopRect)
+        if self.ctx.field(3):
+            self.nWidth = read_coord(s, self.ctx.deltaCoords, self.nWidth)
+        if self.ctx.field(4):
+            self.nHeight = read_coord(s, self.ctx.deltaCoords, self.nHeight)
+        if self.ctx.field(5):
+            self.bRop = Uint8.unpack(s)
+        if self.ctx.field(6):
+            self.numRectangles = Uint8.unpack(s)
+
+        if self.ctx.field(7):
+            self.cbData = Uint16LE.unpack(s)
+            self.rectangles = read_delta_rectangles(s, self.numRectangles)
 
         return self
 
@@ -520,8 +597,44 @@ class MultiDstBlt:
 class MultiPatBlt:
     def __init__(self, ctx: PrimaryContext):
         self.ctx = ctx
+        self.brush = Brush()
+
+        self.nLeftRect = 0
+        self.nTopRect = 0
+        self.nWidth = 0
+        self.nHeight = 0
+        self.bRop = 0
+        self.backColor = 0
+        self.foreColor = 0
+        self.numRectangles = 0
+        self.cbData = 0
+        self.rectangles = []
 
     def update(self, s: BytesIO):
+
+        if self.ctx.field(1):
+            self.nLeftRect = read_coord(s, self.ctx.deltaCoords, self.nLeftRect)
+        if self.ctx.field(2):
+            self.nTopRect = read_coord(s, self.ctx.deltaCoords, self.nTopRect)
+        if self.ctx.field(3):
+            self.nWidth = read_coord(s, self.ctx.deltaCoords, self.nWidth)
+        if self.ctx.field(4):
+            self.nHeight = read_coord(s, self.ctx.deltaCoords, self.nHeight)
+        if self.ctx.field(5):
+            self.bRop = Uint8.unpack(s)
+        if self.ctx.field(6):
+            self.backColor = read_color(s)
+        if self.ctx.field(7):
+            self.foreColor = read_color(s)
+
+        self.brush.update(s, self.ctx.fieldFlags >> 7)
+
+        if self.ctx.field(13):
+            self.numRectangles = Uint8.unpack(s)
+
+        if self.ctx.field(14):
+            self.cbData = Uint16LE.unpack(s)
+            self.rectangles = read_delta_rectangles(s, self.numRectangles)
 
         return self
 
@@ -530,7 +643,39 @@ class MultiScrBlt:
     def __init__(self, ctx: PrimaryContext):
         self.ctx = ctx
 
+        self.nLeftRect = 0
+        self.nTopRect = 0
+        self.nWidth = 0
+        self.nHeight = 0
+        self.bRop = 0
+        self.nXSrc = 0
+        self.nYSrc = 0
+        self.numRectangles = 0
+        self.cbData = 0
+        self.rectangles = []
+
     def update(self, s: BytesIO):
+
+        if self.ctx.field(1):
+            self.nLeftRect = read_coord(s, self.ctx.deltaCoords, self.nLeftRect)
+        if self.ctx.field(2):
+            self.nTopRect = read_coord(s, self.ctx.deltaCoords, self.nTopRect)
+        if self.ctx.field(3):
+            self.nWidth = read_coord(s, self.ctx.deltaCoords, self.nWidth)
+        if self.ctx.field(4):
+            self.nHeight = read_coord(s, self.ctx.deltaCoords, self.nHeight)
+        if self.ctx.field(5):
+            self.bRop = Uint8.unpack(s)
+        if self.ctx.field(6):
+            self.nXSrc = read_coord(s, self.ctx.deltaCoords, self.nXSrc)
+        if self.ctx.field(7):
+            self.nYSrc = read_coord(s, self.ctx.deltaCoords, self.nYSrc)
+        if self.ctx.field(8):
+            self.numRectangles = Uint8.unpack(s)
+
+        if self.ctx.fields(9):
+            self.cbData = Uint16LE.unpack(s)
+            self.rectangles = read_delta_rectangles(s, self.numRectangles)
 
         return self
 
@@ -539,7 +684,42 @@ class MultiOpaqueRect:
     def __init__(self, ctx: PrimaryContext):
         self.ctx = ctx
 
+        self.nLeftRect = 0
+        self.nTopRect = 0
+        self.nWidth = 0
+        self.nHeight = 0
+        self.color = 0
+        self.numRectangles = 0
+        self.cbData = 0
+        self.rectangles = []
+
     def update(self, s: BytesIO):
+
+        if self.ctx.field(1):
+            self.nLeftRect = read_coord(s, self.ctx.deltaCoords, self.nLeftRect)
+        if self.ctx.field(2):
+            self.nTopRect = read_coord(s, self.ctx.deltaCoords, self.nTopRect)
+        if self.ctx.field(3):
+            self.nWidth = read_coord(s, self.ctx.deltaCoords, self.nWidth)
+        if self.ctx.field(4):
+            self.nHeight = read_coord(s, self.ctx.deltaCoords, self.nHeight)
+
+        if self.ctx.field(5):
+            b = Uint8.unpack(s)
+            self.color = (self.color & 0x00FFFF00) | b
+        if self.ctx.field(6):
+            b = Uint8.unpack(s)
+            self.color = (self.color & 0x00FF00FF) | (b << 8)
+        if self.ctx.field(7):
+            b = Uint8.unpack(s)
+            self.color = (self.color & 0x0000FFFF) | (b << 16)
+
+        if self.ctx.field(8):
+            self.numRectangles = Uint8.unpack(s)
+
+        if self.ctx.fields(9):
+            self.cbData = Uint16LE.unpack(s)
+            self.rectangles = read_delta_rectangles(s, self.numRectangles)
 
         return self
 
@@ -548,7 +728,58 @@ class FastIndex:
     def __init__(self, ctx: PrimaryContext):
         self.ctx = ctx
 
+        self.cacheId = 0
+        self.ulCharInc = 0
+        self.flAccel = 0
+        self.backColor = 0
+        self.foreColor = 0
+        self.bkLeft = 0
+        self.bkTop = 0
+        self.bkRight = 0
+        self.bkBottom = 0
+        self.opLeft = 0
+        self.opTop = 0
+        self.opRight = 0
+        self.opBottom = 0
+        self.x = 0
+        self.y = 0
+
+        self.data = []
+
     def update(self, s: BytesIO):
+        if self.ctx.field(1):
+            self.cacheId = Uint8.unpack(s)
+        if self.ctx.field(2):
+            self.ulCharInc = Uint8.unpack(s)
+            self.flAccel = Uint8.unpack(s)
+        if self.ctx.field(3):
+            self.backColor = read_color(s)
+        if self.ctx.field(4):
+            self.foreColor = read_color(s)
+        if self.ctx.field(5):
+            self.bkLeft = read_coord(s, self.ctx.deltaCoords, self.bkLeft)
+        if self.ctx.field(6):
+            self.bkTop = read_coord(s, self.ctx.deltaCoords, self.bkTop)
+        if self.ctx.field(7):
+            self.bkRight = read_coord(s, self.ctx.deltaCoords, self.bkRight)
+        if self.ctx.field(8):
+            self.bkBottom = read_coord(s, self.ctx.deltaCoords, self.bkBottom)
+        if self.ctx.field(9):
+            self.opLeft = read_coord(s, self.ctx.deltaCoords, self.opLeft)
+        if self.ctx.field(10):
+            self.opTop = read_coord(s, self.ctx.deltaCoords, self.opTop)
+        if self.ctx.field(11):
+            self.opRight = read_coord(s, self.ctx.deltaCoords, self.opRight)
+        if self.ctx.field(12):
+            self.opBottom = read_coord(s, self.ctx.deltaCoords, self.opBottom)
+        if self.ctx.field(13):
+            self.x = read_coord(s, self.ctx.deltaCoords, self.x)
+        if self.ctx.field(14):
+            self.y = read_coord(s, self.ctx.deltaCoords, self.y)
+
+        if self.ctx.field(15):
+            cbData = Uint8.unpack(s)
+            self.data = s.read(cbData)
 
         return self
 
@@ -557,7 +788,36 @@ class PolygonSc:
     def __init__(self, ctx: PrimaryContext):
         self.ctx = ctx
 
+        self.xStart = 0
+        self.yStart = 0
+        self.bRop2 = 0
+        self.fillMode = 0
+        self.brushColor = 0
+        self.cbData = 0
+        self.numPoints = 0
+        self.points = []
+
     def update(self, s: BytesIO):
+        num = self.numPoints
+
+        if self.ctx.field(1):
+            self.xStart = read_coord(s, self.ctx.deltaCoords, self.xStart)
+        if self.ctx.field(2):
+            self.yStart = read_coord(s, self.ctx.deltaCoords, self.yStart)
+        if self.ctx.field(3):
+            self.bRop2 = Uint8.unpack(s)
+        if self.ctx.field(4):
+            self.fillMode = Uint8.unpack(s)
+        if self.ctx.field(5):
+            self.brushColor = read_color(s)
+
+        if self.ctx.field(6):
+            num = Uint8.unpack(s)
+
+        if self.ctx.fields(7):
+            self.cbData = Uint8.unpack(s)
+            self.numPoints = num
+            self.points = read_delta_points(s, self.numPoints, self.xStart, self.yStart)
 
         return self
 
@@ -565,8 +825,47 @@ class PolygonSc:
 class PolygonCb:
     def __init__(self, ctx: PrimaryContext):
         self.ctx = ctx
+        self.brush = Brush()
+
+        self.xStart = 0
+        self.yStart = 0
+        self.bRop2 = 0
+        self.fillMode = 0
+        self.backColor = 0
+        self.foreColor = 0
+        self.cbData = 0
+        self.numPoints = 0
+        self.points = []
+        self.backMode = BACKMODE_OPAQUE
 
     def update(self, s: BytesIO):
+
+        num = self.numPoints
+        if self.ctx.field(1):
+            self.xStart = read_coord(s, self.ctx.deltaCoords, self.xStart)
+        if self.ctx.field(2):
+            self.yStart = read_coord(s, self.ctx.deltaCoords, self.yStart)
+        if self.ctx.field(3):
+            self.bRop2 = Uint8.unpack(s)
+        if self.ctx.field(4):
+            self.fillMode = Uint8.unpack(s)
+        if self.ctx.field(5):
+            self.backColor = read_color(s)
+        if self.ctx.field(6):
+            self.foreColor = read_color(s)
+
+        self.brush.update(s, self.ctx.fieldFlags >> 6)
+
+        if self.ctx.field(12):
+            num = Uint8.unpack(s)
+
+        if self.ctx.field(13):
+            self.cbData = Uint8.unpack(s)
+            self.numPoints = num
+            self.points = read_delta_points(s, self.numPoints, self.xStart, self.yStart)
+
+        self.backMode = BACKMODE_TRANSPARENT if self.bRop2 & 0x80 else BACKMODE_OPAQUE
+        self.bRop2 = self.bRop2 & 0x1F
 
         return self
 
@@ -575,7 +874,33 @@ class PolyLine:
     def __init__(self, ctx: PrimaryContext):
         self.ctx = ctx
 
+        self.xStart = 0
+        self.yStart = 0
+        self.bRop2 = 0
+        self.penColor = 0
+        self.cbData = 0
+        self.numDeltaEntries = 0
+        self.points = []
+
     def update(self, s: BytesIO):
+        num = self.numDeltaEntries
+        if self.ctx.field(1):
+            self.xStart = read_coord(s, self.ctx.deltaCoords, self.xStart)
+        if self.ctx.field(2):
+            self.yStart = read_coord(s, self.ctx.deltaCoords, self.yStart)
+        if self.ctx.field(3):
+            self.bRop2 = Uint8.unpack(s)
+        if self.ctx.field(4):
+            s.read(2)  # unused (brushCacheIndex)
+        if self.ctx.field(5):
+            self.penColor = read_color(s)
+        if self.ctx.field(6):
+            num = Uint8.unpack(s)
+
+        if self.ctx.field(7):
+            self.cbData = Uint8.unpack(s)
+            self.numDeltaEntries = num
+            self.points = read_delta_points(s, self.numPoints, self.xStart, self.yStart)
 
         return self
 
