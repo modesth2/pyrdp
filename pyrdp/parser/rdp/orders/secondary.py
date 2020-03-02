@@ -182,24 +182,23 @@ class CacheBrush:
         compressed = False
         if cx == 8 and cy == 8 and self.bpp == 1:  # 8x8 mono bitmap
             self.data = s.read(8)[::-1]
-        elif self.bpp == 8 and iBytes == 20:
-            compressed = True
-        elif self.bpp == 16 and iBytes == 24:
-            compressed = True
-        elif self.bpp == 24 and iBytes == 32:
-            compressed = True
-
-        if compressed:
-            decompress_brush(s, self.bpp)
-            self.data = []
         else:
-            self.data = bytes(256)  # Preallocate
-            scanline = (self.bpp // 8) * 8
-            for i in range(7):
-                # TODO: Verify correctness
-                print(scanline)  # DEBUG
-                o = (7-i)*scanline
-                self.data[o:o+8] = s.read(scanline)
+            if self.bpp == 8 and iBytes == 20:
+                compressed = True
+            elif self.bpp == 16 and iBytes == 24:
+                compressed = True
+            elif self.bpp == 24 and iBytes == 32:
+                compressed = True
+
+            if compressed:
+                self.data = decompress_brush(s, self.bpp)
+            else:
+                self.data = bytes(256)  # Preallocate
+                scanline = (self.bpp // 8) * 8
+                for i in range(7):
+                    # TODO: Verify correctness
+                    o = (7-i)*scanline
+                    self.data[o:o+8] = s.read(scanline)
 
         return self
 
