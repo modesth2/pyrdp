@@ -23,6 +23,8 @@ from pyrdp.ui import QRemoteDesktop, RDPBitmapToQtImage
 from .gdi import GdiQtFrontend
 from pyrdp.parser.rdp.orders import OrdersParser
 
+from binascii import hexlify
+
 
 class PlayerEventHandler(QObject, Observer):
     """
@@ -177,7 +179,11 @@ class PlayerEventHandler(QObject, Observer):
             self.handleBitmap(bitmapData)
 
     def onFastPathOrders(self, event: FastPathOrdersEvent):
-        self.orders.parse(event)
+        try:
+            self.orders.parse(event)
+        except Exception as e:
+            log.warn('Failed to parse a drawing order: ' + e)
+            log.warn('Payload = ' + hexlify(event.payload))
 
     def onFastPathInput(self, pdu: PlayerPDU):
         parser = BasicFastPathParser(ParserMode.SERVER)
