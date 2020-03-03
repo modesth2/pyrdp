@@ -1,3 +1,9 @@
+#
+# This file is part of the PyRDP project.
+# Copyright (C) 2019 GoSecure Inc.
+# Licensed under the GPLv3 or later.
+#
+
 from pyrdp.parser.rdp.orders import GdiFrontend
 
 from pyrdp.parser.rdp.orders.alternate import CreateOffscreenBitmap, SwitchSurface, CreateNineGridBitmap, \
@@ -24,6 +30,7 @@ class GdiQtFrontend(GdiFrontend):
     possible, but GDI specific operations that are not supported by Qt
     are implemented here.
     """
+
     def __init__(self, dc: QRemoteDesktop):
         self.dc = dc
         self._surface = QImage(dc.width(), dc.height(), QImage.Format_RGB32)
