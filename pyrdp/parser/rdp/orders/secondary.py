@@ -6,7 +6,7 @@ from io import BytesIO
 from pyrdp.core.packing import Uint8, Uint16LE, Uint32LE
 from pyrdp.enum.orders import Secondary
 from pyrdp.enum.rdp import GeneralExtraFlag
-from .common import read_color, read_utf16_str, read_encoded_uint16, read_encoded_uint32, Glyph
+from .common import read_color, read_utf16_str, read_encoded_uint16, read_encoded_uint32
 
 CBR2_BPP = [0, 0, 0, 8, 16, 24, 32]
 BPP_CBR2 = [0, 0, 0, 0, 0, 0, 0, 0, 3, 0, 0, 0, 0, 0, 0, 0, 4, 0, 0, 0,
@@ -127,6 +127,20 @@ class CacheGlyph:
 
 
 class CacheBitmapV2:
+    def __init__(self):
+        self.cacheId = 0
+        self.cacheIndex = 0
+
+        self.flags = 0
+        self.bpp = 0
+        self.key1 = self.key2 = 0
+        self.height = self.width = 0
+
+        self.cbCompFirstRowSize = 0
+        self.cbCompMainBodySize = 0
+        self.cbScanWidth = 0
+        self.cbUncompressedSize = 0
+
     @staticmethod
     def parse(s: BytesIO, orderType: int, flags: int) -> 'CacheBitmapV2':
         self = CacheBitmapV2()
