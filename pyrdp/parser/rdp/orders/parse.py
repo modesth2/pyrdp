@@ -258,27 +258,27 @@ class OrdersParser:
 
     def _parse_gdiplus_first(self, s: BytesIO):
         """GDIPLUS_FIRST"""
-        self.notify.GdiPlusFirst(GdiPlusFirst.parse(s))
+        self.notify.gdiPlusFirst(GdiPlusFirst.parse(s))
 
     def _parse_gdiplus_next(self, s: BytesIO):
         """GDIPLUS_NEXT"""
-        self.notify.GdiPlusNext(GdiPlusNext.parse(s))
+        self.notify.drawGdiPlusNext(GdiPlusNext.parse(s))
 
     def _parse_gdiplus_end(self, s: BytesIO):
         """GDIPLUS_END"""
-        self.notify.GdiPlusEnd(GdiPlusEnd.parse(s))
+        self.notify.drawGdiPlusEnd(GdiPlusEnd.parse(s))
 
     def _parse_gdiplus_cache_first(self, s: BytesIO):
         """GDIPLUS_CACHE_FIRST"""
-        self.notify.GdiPlusCacheFirst(GdiPlusCacheFirst.parse(s))
+        self.notify.drawGdiPlusCacheFirst(GdiPlusCacheFirst.parse(s))
 
     def _parse_gdiplus_cache_next(self, s: BytesIO):
         """GDIPLUS_CACHE_NEXT"""
-        self.notify.GdiPlusCacheNext(GdiPlusCacheNext.parse(s))
+        self.notify.drawGdiPlusCacheNext(GdiPlusCacheNext.parse(s))
 
     def _parse_gdiplus_cache_end(self, s: BytesIO):
         """GDIPLUS_CACHE_END"""
-        self.notify.GdiPlusCacheEnd(GdiPlusCacheEnd.parse(s))
+        self.notify.drawGdiPlusCacheEnd(GdiPlusCacheEnd.parse(s))
 
     def _parse_window(self, s: BytesIO):
         """WINDOW"""
