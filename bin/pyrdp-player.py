@@ -21,10 +21,11 @@ import os
 
 from PySide2.QtWidgets import QApplication
 
-from pyrdp.logging import LOGGER_NAMES, NotifyHandler
+from pyrdp.logging import LOGGER_NAMES, NotifyHandler, LoggerNameFilter
 from pyrdp.player import MainWindow
 
-def prepareLoggers(logLevel: int, outDir: Path):
+
+def prepareLoggers(logLevel: int, outDir: Path, logFilter: str = None):
     logDir = outDir / "logs"
     logDir.mkdir(exist_ok = True)
 
@@ -33,6 +34,7 @@ def prepareLoggers(logLevel: int, outDir: Path):
 
     streamHandler = logging.StreamHandler()
     streamHandler.setFormatter(textFormatter)
+    streamHandler.addFilter(LoggerNameFilter(logFilter))
 
     fileHandler = logging.handlers.RotatingFileHandler(logDir / "player.log")
     fileHandler.setFormatter(textFormatter)
@@ -63,13 +65,14 @@ def main():
     parser.add_argument("-p", "--port", help="Bind port (default: 3000)", default=3000)
     parser.add_argument("-o", "--output", help="Output folder", default="pyrdp_output")
     parser.add_argument("-L", "--log-level", help="Log level", default="INFO", choices=["INFO", "DEBUG", "WARNING", "ERROR", "CRITICAL"], nargs="?")
+    parser.add_argument("-F", "--log-filter", help="Only show logs from this logger name (accepts '*' wildcards)", default="")
 
     args = parser.parse_args()
     outDir = Path(args.output)
     outDir.mkdir(exist_ok = True)
 
     logLevel = getattr(logging, args.log_level)
-    prepareLoggers(logLevel, outDir)
+    prepareLoggers(logLevel, outDir, args.log_filter)
 
     app = QApplication(sys.argv)
     mainWindow = MainWindow(args.bind, int(args.port), args.replay)
