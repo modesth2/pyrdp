@@ -120,6 +120,9 @@ class GdiPlusFirst:
 
         return self
 
+    def __str__(self):
+        return f'<GdiPlusFirst Size={len(self.data)} Total={self.totalSize}, EmfSize={self.totalEmfSize}>'
+
 
 class GdiPlusNext:
     @staticmethod
@@ -132,6 +135,9 @@ class GdiPlusNext:
         self.data = s.read(cbSize)
 
         return self
+
+    def __str__(self):
+        return f'<GdiPlusNext Size={len(self.data)}>'
 
 
 class GdiPlusEnd:
