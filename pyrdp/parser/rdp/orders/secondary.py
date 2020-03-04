@@ -186,6 +186,10 @@ class CacheBitmapV2:
 
         return self
 
+    def __str__(self):
+        return (f'<CacheBitmapV2 Res={self.width}x{self.height}x{self.bpp} Len={len(self.data)}'
+                f' CacheId={self.cacheId} CacheIndex={self.cacheIndex}>')
+
 
 class CacheBrush:
     @staticmethod
@@ -255,3 +259,7 @@ class CacheBitmapV3:
         self.data = s.read(dataLen)
 
         return self
+
+    def __str__(self):
+        return (f'<CacheBitmapV3 Res={self.width}x{self.height}x{self.bpp} Len={len(self.data)}'
+                f' CacheId={self.cacheId} CacheIndex={self.cacheIndex} Codec={self.codecId}>')

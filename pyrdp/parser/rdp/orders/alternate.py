@@ -200,6 +200,10 @@ class FrameMarker:
 
         return self
 
+    def __str__(self):
+        a = 'BEGIN' if self.action == 0 else 'END'
+        return f'<Frame {a}>'
+
 # class Window:
 #     @staticmethod
 #     def parse(s: BytesIO) -> 'Window':

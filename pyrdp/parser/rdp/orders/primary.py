@@ -383,6 +383,10 @@ class ScrBlt:
 
         return self
 
+    def __str__(self):
+        return (f'<ScrBlt Src=({self.nXSrc},{self.nYSrc}) OP={self.bRop}'
+                f' Dst=({self.nLeftRect}, {self.nTopRect}, {self.nWidth}, {self.nHeight})')
+
 
 class DrawNineGrid:
     def __init__(self, ctx: PrimaryContext):
@@ -586,6 +590,10 @@ class MemBlt:
         self.cacheId = self.cacheId & 0xFF
 
         return self
+
+    def __str__(self):
+        return (f'<MemBlt ({self.xSrc},{self.ySrc}) OP={self.rop} L={self.left} T={self.top} W={self.width} H={self.height}'
+                f' cacheIndex={self.cacheIndex} cacheId={self.cacheId} colorIdx={self.colorIndex}>')
 
 
 class Mem3Blt:
