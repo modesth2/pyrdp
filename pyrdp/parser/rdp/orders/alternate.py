@@ -42,7 +42,10 @@ class SwitchSurface:
         self = SwitchSurface()
 
         self.id = Uint16LE.unpack(s)
-        return id
+        return self
+
+    def __str__(self):
+        return f'<SwitchSurface Id={self.id}>'
 
 
 class CreateNineGridBitmap:

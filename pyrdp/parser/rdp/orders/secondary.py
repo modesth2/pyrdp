@@ -243,23 +243,30 @@ class CacheBitmapV3:
         self.cacheId = flags & 0x00000003
         self.flags = (flags & 0x0000FF80) >> 7
         bitsPerPixelId = (flags & 0x00000078) >> 3
+
+        # The spec says this should never be 0, but it is...
         self.bpp = CBR23_BPP[bitsPerPixelId]
 
         self.cacheIndex = Uint16LE.unpack(s)
         self.key1 = Uint32LE.unpack(s)
         self.key2 = Uint32LE.unpack(s)
+        self.bpp = Uint8.unpack(s)
 
-        s.read(2)  # Reserved (2 bytes)
+        compressed = Uint8.unpack(s)
+        s.read(1)  # Reserved (1 bytes)
 
         self.codecId = Uint8.unpack(s)
         self.width = Uint16LE.unpack(s)
         self.height = Uint16LE.unpack(s)
         dataLen = Uint32LE.unpack(s)
 
+        if compressed:  # TS_COMPRESSED_BITMAP_HEADER_EX present.
+            s.read(24)  # Non-essential.
+
         self.data = s.read(dataLen)
 
         return self
 
     def __str__(self):
-        return (f'<CacheBitmapV3 Res={self.width}x{self.height}x{self.bpp} Len={len(self.data)}'
-                f' CacheId={self.cacheId} CacheIndex={self.cacheIndex} Codec={self.codecId}>')
+        return (f'<CacheBitmapV3 {self.width}x{self.height}x{self.bpp} Size={len(self.data)}'
+                f' Cache={self.cacheId}:{self.cacheIndex} Codec={self.codecId}>')
