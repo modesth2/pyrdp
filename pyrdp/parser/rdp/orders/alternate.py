@@ -31,7 +31,7 @@ class CreateOffscreenBitmap:
             cIndices = Uint16LE.unpack(s)
             self.delete = [Uint16LE.unpack(s) for _ in range(cIndices)]
         else:
-            self.delete = None
+            self.delete = []
 
         return self
 

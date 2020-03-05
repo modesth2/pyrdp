@@ -13,6 +13,9 @@ from pyrdp.parser.rdp.orders.alternate import CreateOffscreenBitmap, SwitchSurfa
     StreamBitmapFirst, StreamBitmapNext, GdiPlusFirst, GdiPlusNext, GdiPlusEnd, GdiPlusCacheFirst, \
     GdiPlusCacheNext, GdiPlusCacheEnd, FrameMarker
 
+from .cache import BitmapCache
+import raster
+
 from pyrdp.parser.rdp.orders.secondary import CacheBitmapV1, CacheBitmapV2, CacheBitmapV3, CacheColorTable, \
     CacheGlyph, CacheBrush
 
@@ -26,6 +29,8 @@ from PySide2.QtGui import QImage, QPainter, QColor
 
 LOG = logging.getLogger(LOGGER_NAMES.PLAYER + '.gdi')
 
+SCREEN_BITMAP_SURFACE = 0xFFFF
+
 
 class GdiQtFrontend(GdiFrontend):
     """
@@ -38,11 +43,17 @@ class GdiQtFrontend(GdiFrontend):
 
     def __init__(self, dc: QRemoteDesktop):
         self.dc = dc
-        self._surface = QImage(dc.width(), dc.height(), QImage.Format_RGB32)
-        self._old = None
 
-        # For now this is a rudimentary cache implementation.
-        self.bmpCache = {}
+        # Initialize cache.
+        self.bitmaps = BitmapCache()
+
+        # Surfaces and Offscreen bitmaps.
+        self.surfaces = {SCREEN_BITMAP_SURFACE: QImage(dc.width(), dc.height(), QImage.Format_RGB32)}
+        self.activeSurface = SCREEN_BITMAP_SURFACE
+
+    @property
+    def surface(self) -> QImage:
+        return self.surfaces[self.activeSurface]
 
     def dstBlt(self, state: DstBlt):
         LOG.debug(state)
@@ -53,9 +64,9 @@ class GdiQtFrontend(GdiFrontend):
     def scrBlt(self, state: ScrBlt):
         LOG.debug(state)
         # TODO: ROP3 operation
-        p = QPainter(self._surface)
-        p.drawImage(state.nLeftRect, state.nTopRect, self._old, state.nXSrc, state.nYSrc, state.nWidth, state.nHeight)
-        p.setBrush(QColor.fromRgb(0xff, 0, 0, 0x20))
+        prv = QImage.copy(self.surface)
+        p = QPainter(self.surface)
+        p.drawImage(state.nLeftRect, state.nTopRect, prv, state.nXSrc, state.nYSrc, state.nWidth, state.nHeight)
 
     def drawNineGrid(self, state: DrawNineGrid):
         LOG.debug(state)
@@ -133,30 +144,15 @@ class GdiQtFrontend(GdiFrontend):
     # Secondary Handlers
     def cacheBitmapV1(self, state: CacheBitmapV1):
         LOG.debug(state)
+        self.bitmaps.add(state)
 
     def cacheBitmapV2(self, state: CacheBitmapV2):
         LOG.debug(state)
-        cid = state.cacheId
-        idx = state.cacheIndex
-
-        # Create cache if needed.
-        if cid not in self.bmpCache:
-            self.bmpCache[cid] = {}
-
-        cache = self.bmpCache[cid]
-        cache[idx] = state
+        self.bitmaps.add(state)
 
     def cacheBitmapV3(self, state: CacheBitmapV3):
         LOG.debug(state)
-        cid = state.cacheId
-        idx = state.cacheIndex
-
-        # Create cache if needed.
-        if cid not in self.bmpCache:
-            self.bmpCache[cid] = {}
-
-        cache = self.bmpCache[cid]
-        cache[idx] = state
+        self.bitmaps.add(state)
 
     def cacheColorTable(self, state: CacheColorTable):
         LOG.debug(state)
@@ -172,15 +168,21 @@ class GdiQtFrontend(GdiFrontend):
         LOG.debug(state)
         if state.action == 0x01:  # END
             self.dc.notifyImage(0, 0, self._surface, self.dc.width(), self.dc.height())
-        else:  # BEGIN
-            self._old = self._surface
-            self._surface = self._old.copy()
 
     def createOffscreenBitmap(self, state: CreateOffscreenBitmap):
         LOG.debug(state)
+        self.surfaces[state.id] = QImage(state.cx, state.cy, QImage.Format_RGB32)
+
+        for d in state.delete:
+            if d in self.surfaces:
+                del self.surfaces[d]
 
     def switchSurface(self, state: SwitchSurface):
         LOG.debug(state)
+        if state.id not in self.surfaces:
+            LOG.warning('Request for uninitialized surface: %d', state.id)
+            return
+        self.activeSurface = state.id
 
     def createNineGridBitmap(self, state: CreateNineGridBitmap):
         LOG.debug(state)
