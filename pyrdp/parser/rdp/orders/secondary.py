@@ -146,7 +146,7 @@ class CacheGlyph:
         return self
 
 
-class CacheBitmapV2:
+class CacheBitmapV2(CacheBitmap):
     def __init__(self):
         super().__init__(2)
 
@@ -203,7 +203,7 @@ class CacheBitmapV2:
                 f' CacheId={self.cacheId} CacheIndex={self.cacheIndex}>')
 
 
-class CacheBitmapV3:
+class CacheBitmapV3(CacheBitmap):
     @staticmethod
     def parse(s: BytesIO, flags: int) -> CacheBitmap:
         self = CacheBitmapV3(3)
