@@ -47,7 +47,7 @@ class OrdersParser:
 
         :param GdiFrontend frontend: The frontend that will process GDI messages.
         """
-        self.orders: FastPathOrdersEvent = None
+
         self.notify: GdiFrontend = frontend
         self.ctx = Context()
         self.glyphLevel: GlyphSupport = GlyphSupport.GLYPH_SUPPORT_NONE
@@ -63,7 +63,6 @@ class OrdersParser:
         """
         Entrypoint for parsing TS_FP_UPDATE_ORDERS.
         """
-        self.orders = orders
 
         s = BytesIO(orders.payload)
 
@@ -89,9 +88,8 @@ class OrdersParser:
 
         orderType = self.ctx.update(s, flags)
 
-        fp = _pri[orderType]
-        LOG.debug('[PRIMARY] %s', _repr(fp))
-        fp(self, s)
+        assert orderType >= 0 and orderType < len(_pri)
+        _pri[orderType](self, s)
 
     def _parse_dstblt(self, s: BytesIO):
         """DSTBLT"""
@@ -184,16 +182,12 @@ class OrdersParser:
     # Secondary drawing orders.
     # ----------------------------------------------------------------------
     def _parse_secondary(self, s: BytesIO, flags: int):
-        orderLength = Uint16LE.unpack(s)  # Unused?
+        Uint16LE.unpack(s)  # orderLength (unused)
         extraFlags = Uint16LE.unpack(s)
         orderType = Uint8.unpack(s)
-        # nxt = orderLength + 7
 
         assert orderType >= 0 and orderType < len(_sec)
-
-        fp = _sec[orderType]
-        LOG.debug('[SECONDARY] %s (len=%d)', _repr(fp), orderLength)
-        fp(self, s, orderType, extraFlags)
+        _sec[orderType](self, s, orderType, extraFlags)
 
     def _parse_cache_bitmap_v1(self, s: BytesIO, orderType: int, flags: int):
         """CACHE_BITMAP_V1"""
@@ -232,9 +226,7 @@ class OrdersParser:
 
         assert orderType >= 0 and orderType < len(_alt)
 
-        fp = _alt[orderType]
-        LOG.debug('[ALTSEC] %s', _repr(fp))
-        fp(self, s)
+        _alt[orderType](self, s)
 
     def _parse_create_offscreen_bitmap(self, s: BytesIO):
         """CREATE_OFFSCREEN_BITMAP"""
