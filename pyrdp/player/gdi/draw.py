@@ -14,7 +14,7 @@ from pyrdp.parser.rdp.orders.alternate import CreateOffscreenBitmap, SwitchSurfa
     GdiPlusCacheNext, GdiPlusCacheEnd, FrameMarker
 
 from .cache import BitmapCache
-import raster
+from .raster import rop3, rop2
 
 from pyrdp.parser.rdp.orders.secondary import CacheBitmapV1, CacheBitmapV2, CacheBitmapV3, CacheColorTable, \
     CacheGlyph, CacheBrush
@@ -85,19 +85,15 @@ class GdiQtFrontend(GdiFrontend):
 
     def memBlt(self, state: MemBlt):
         LOG.debug(state)
-        if state.cacheId not in self.bmpCache:  # Ignore cache miss?
-            return
+        bmp = self.bitmaps.get(state.cacheId, state.cacheIndex)
 
-        cache = self.bmpCache[state.cacheId]
-        if state.cacheIndex not in cache:  # Ignore cache miss?
-            return
-
-        bmp = cache[state.cacheIndex]
+        if bmp is None:
+            return  # Ignore cache misses.
 
         # TODO: Check if NOHDR from general caps otherwise check COMPHDR
         img = RDPBitmapToQtImage(bmp.width, bmp.height,  bmp.bpp, True, bmp.data)
 
-        p = QPainter(self._surface)
+        p = QPainter(self.surface)
 
         ySrc = (bmp.height - state.height) - state.ySrc
         p.drawImage(state.left, state.top, img, state.xSrc, ySrc)
@@ -167,7 +163,7 @@ class GdiQtFrontend(GdiFrontend):
     def frameMarker(self, state: FrameMarker):
         LOG.debug(state)
         if state.action == 0x01:  # END
-            self.dc.notifyImage(0, 0, self._surface, self.dc.width(), self.dc.height())
+            self.dc.notifyImage(0, 0, self.surface, self.dc.width(), self.dc.height())
 
     def createOffscreenBitmap(self, state: CreateOffscreenBitmap):
         LOG.debug(state)
